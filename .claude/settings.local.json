@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e \":*)",
+      "Bash(node:*)",
+      "Bash(tee \"C:/Users/Lenovo/.claude/plans/_content.txt\")",
+      "Bash(/dev/null:*)",
+      "Bash(tee -a \"C:/Users/Lenovo/.claude/plans/_content.txt\")",
+      "Bash(\"C:\\\\Users\\\\Lenovo\\\\.claude\\\\plans\\\\lovely-tickling-biscuit_trimmed.md\")",
+      "Bash(mv \"C:\\\\Users\\\\Lenovo\\\\.claude\\\\plans\\\\lovely-tickling-biscuit_trimmed.md\" \"C:\\\\Users\\\\Lenovo\\\\.claude\\\\plans\\\\lovely-tickling-biscuit.md\")",
+      "Read(//d/Documents/Deep Learn HQ/Clients/raheel/**)",
+      "Bash(mkdir -p _static_backup)",
+      "Bash(cp -r website/css website/js website/images website/*.html _static_backup/)",
+      "Bash(rm -f *.html)",
+      "Bash(rm -rf css js images .claude/launch.json)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm)"
+    ]
+  }
+}
