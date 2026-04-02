@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     }
 
     // Check planStatus for the unified user model
-    const status = (user as Record<string, unknown>).planStatus as string | undefined;
+    const status = user.planStatus;
 
     if (status === "PENDING") {
       return NextResponse.json(

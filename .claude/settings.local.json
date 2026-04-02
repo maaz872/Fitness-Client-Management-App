@@ -45,7 +45,14 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://level-up-v1-tau.vercel.app/\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://level-up-v1-tau.vercel.app/testimonials\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://level-up-v1-tau.vercel.app/api/recipes\")",
-      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/api/recipes\")"
+      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/api/recipes\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://level-up-v1-tau.vercel.app/login\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://level-up-v1-tau.vercel.app/api/site-settings\")",
+      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/\")",
+      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/api/auth/login\" -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"demo@levelup.com\"\",\"\"password\"\":\"\"user1234\"\"}')",
+      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/api/auth/login\" -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"admin@levelup.com\"\",\"\"password\"\":\"\"Lev3lUp@Adm!n2026\"\"}')",
+      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/api/auth/login\" -X POST -H \"Content-Type: application/json\" -d \"{\"\"email\"\":\"\"admin@levelup.com\"\",\"\"password\"\":\"\"Lev3lUp@Adm!n2026\"\"}\")",
+      "Bash(npx tsc:*)"
     ]
   }
 }

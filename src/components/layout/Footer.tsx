@@ -64,8 +64,7 @@ export default async function Footer() {
               Find out more
             </h4>
             <div className="flex flex-col gap-1">
-              <Link href="/" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Coaching</Link>
-              <Link href="/nutrition" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Nutrition</Link>
+              <Link href="/nutrition" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">The Hub</Link>
               <Link href="/about" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">About</Link>
               <Link href="/testimonials" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Testimonials</Link>
             </div>

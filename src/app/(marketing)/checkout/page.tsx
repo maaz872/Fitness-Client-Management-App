@@ -602,15 +602,6 @@ export default function CheckoutPage() {
                   progress tracking, and restaurant guides.
                 </p>
               </div>
-              <div className="mt-4 bg-[#FF6B00]/10 rounded-xl p-4 border border-[#FF6B00]/20">
-                <p className="text-xs text-[#FF6B00] leading-relaxed font-medium">
-                  Looking for coaching? Coaching plans require a separate
-                  application.{" "}
-                  <Link href="/coaching" className="underline">
-                    Apply here
-                  </Link>
-                </p>
-              </div>
             </div>
           </div>
         )}

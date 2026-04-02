@@ -8,26 +8,23 @@ interface Testimonial {
   clientName: string;
   duration: string;
   quote: string;
-  profilePhoto?: string | null;
+  profilePhoto: string | null;
 }
 
 interface TestimonialTabsProps {
-  hubTestimonials: Testimonial[];
-  coachingTestimonials: Testimonial[];
+  testimonials: Testimonial[];
 }
 
-const coachPhotos = [
+const fallbackPhotos = [
   "/images/Coach_1.jpeg",
   "/images/Coach_2.jpeg",
   "/images/Coach_3.jpeg",
   "/images/Coach_4.jpeg",
 ];
 
-export default function TestimonialTabs({ hubTestimonials, coachingTestimonials }: TestimonialTabsProps) {
-  const [activeTab, setActiveTab] = useState<"hub" | "coaching">("hub");
+export default function TestimonialTabs({ testimonials }: TestimonialTabsProps) {
   const [showAll, setShowAll] = useState(false);
 
-  const testimonials = activeTab === "hub" ? hubTestimonials : coachingTestimonials;
   const visible = showAll ? testimonials : testimonials.slice(0, 6);
 
   return (
@@ -36,30 +33,6 @@ export default function TestimonialTabs({ hubTestimonials, coachingTestimonials 
         <h2 className="text-4xl md:text-5xl font-black text-white text-center mb-12">
           Real Results From Real People
         </h2>
-
-        {/* Tab Buttons */}
-        <div className="flex justify-center gap-4 mb-12">
-          <button
-            onClick={() => { setActiveTab("hub"); setShowAll(false); }}
-            className={`px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-colors ${
-              activeTab === "hub"
-                ? "bg-[#E51A1A] text-white"
-                : "bg-[#1E1E1E] text-white/50 border border-[#2A2A2A] hover:text-white/70"
-            }`}
-          >
-            Hub Members
-          </button>
-          <button
-            onClick={() => { setActiveTab("coaching"); setShowAll(false); }}
-            className={`px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-colors ${
-              activeTab === "coaching"
-                ? "bg-[#E51A1A] text-white"
-                : "bg-[#1E1E1E] text-white/50 border border-[#2A2A2A] hover:text-white/70"
-            }`}
-          >
-            Coaching Clients
-          </button>
-        </div>
 
         {/* Testimonial Grid */}
         {visible.length > 0 ? (
@@ -71,7 +44,7 @@ export default function TestimonialTabs({ hubTestimonials, coachingTestimonials 
               >
                 <div className="relative h-48 rounded-xl overflow-hidden mb-4">
                   <Image
-                    src={t.profilePhoto || coachPhotos[i % coachPhotos.length]}
+                    src={t.profilePhoto || fallbackPhotos[i % fallbackPhotos.length]}
                     alt={t.clientName}
                     fill
                     className="object-cover"

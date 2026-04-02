@@ -26,7 +26,7 @@ export default function TermsPage() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-3">2. Services</h2>
         <p className="text-gray-700 leading-relaxed">
-          Level Up provides online fitness coaching, training programmes,
+          Level Up provides online fitness services, training programmes,
           nutritional guidance, and access to our digital platform known as
           &ldquo;The Hub.&rdquo; Our services are designed for informational
           and educational purposes and are not a substitute for professional

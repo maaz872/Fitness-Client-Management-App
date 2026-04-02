@@ -22,16 +22,10 @@ const planBadge = (plan: string) => {
   const styles: Record<string, string> = {
     FREE: "bg-white/10 text-white/50",
     HUB: "bg-[#FF6B00]/20 text-[#FF6B00]",
-    COACHING_8WEEK: "bg-[#E51A1A]/20 text-[#E51A1A]",
-    COACHING_12WEEK: "bg-[#E51A1A]/20 text-[#E51A1A]",
-    COACHING_LONGTERM: "bg-[#E51A1A]/20 text-[#E51A1A]",
   };
   const labels: Record<string, string> = {
     FREE: "Free",
     HUB: "Hub",
-    COACHING_8WEEK: "8-Week",
-    COACHING_12WEEK: "12-Week",
-    COACHING_LONGTERM: "Long-Term",
   };
   return (
     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${styles[plan] || "bg-white/10 text-white/50"}`}>
@@ -137,7 +131,7 @@ export default function UsersAdmin({ users: initialUsers }: { users: User[] }) {
       {/* Pending Alert */}
       {pendingCount > 0 && (
         <div className="bg-[#FFB800]/10 border border-[#FFB800]/30 rounded-2xl p-4 mb-6 flex items-center gap-3">
-          <span className="text-[#FFB800] text-2xl">⏳</span>
+          <span className="text-[#FFB800] text-2xl">&#9203;</span>
           <div>
             <p className="text-[#FFB800] font-bold text-sm">{pendingCount} pending approval{pendingCount > 1 ? "s" : ""}</p>
             <p className="text-white/50 text-xs">Users waiting for account activation</p>

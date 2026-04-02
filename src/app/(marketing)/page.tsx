@@ -2,9 +2,7 @@ export const dynamic = "force-dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import TierComparison from "@/components/marketing/TierComparison";
 import TestimonialTabs from "@/components/marketing/TestimonialTabs";
-import CoachSpotlight from "@/components/marketing/CoachSpotlight";
 
 const transformations = [
   { name: "Sarah M.", stat: "Lost 14kg" },
@@ -27,15 +25,10 @@ const coachPhotos = [
 ];
 
 export default async function HomePage() {
-  const [hubTestimonials, coachingTestimonials, siteSettings] = await Promise.all([
+  const [hubTestimonials, siteSettings] = await Promise.all([
     prisma.testimonial.findMany({
-      where: { isPublished: true, category: "hub" },
-      take: 20,
-      orderBy: { displayOrder: "asc" },
-    }),
-    prisma.testimonial.findMany({
-      where: { isPublished: true, category: "coaching" },
-      take: 20,
+      where: { isPublished: true },
+      take: 40,
       orderBy: { displayOrder: "asc" },
     }),
     prisma.siteContent.findMany(),
@@ -64,9 +57,8 @@ export default async function HomePage() {
             Build The Body<br />You Deserve.
           </h1>
           <p className="text-white/70 text-lg md:text-xl max-w-[600px] mb-10 leading-relaxed">
-            Whether you want proven nutrition tools or 1:1 coaching with Coach Raheel —
-            Level Up gives you everything you need to lose fat, build lean muscle, and
-            keep it off for good.
+            Level Up gives you the proven nutrition tools, recipes, and tracking system
+            you need to lose fat, build lean muscle, and keep it off for good.
           </p>
           <div className="flex flex-wrap gap-4">
             <Link
@@ -75,18 +67,11 @@ export default async function HomePage() {
             >
               Get The Hub &mdash; &euro;79
             </Link>
-            <Link
-              href="/coaching/apply"
-              className="border border-white/30 hover:border-white/60 text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
-            >
-              Apply for Coaching
-            </Link>
           </div>
         </div>
       </section>
 
-      {/* ── Section 2: Tier Comparison ── */}
-      <TierComparison />
+      {/* ── Section 2: Stats Bar ── */}
 
       {/* ── Section 3: Stats Bar ── */}
       <section className="bg-[#0A0A0A] py-16 px-6 border-y border-[#1E1E1E]">
@@ -151,19 +136,11 @@ export default async function HomePage() {
       </section>
 
       {/* ── Section 5: Coaching Spotlight ── */}
-      {cfg.section_coaching_visible === "true" && <CoachSpotlight />}
 
       {/* ── Section 6: Testimonials ── */}
       {cfg.section_testimonials_visible === "true" && (
         <TestimonialTabs
-          hubTestimonials={hubTestimonials.map((t) => ({
-            id: t.id,
-            clientName: t.clientName,
-            duration: t.duration,
-            quote: t.quote,
-            profilePhoto: t.profilePhoto,
-          }))}
-          coachingTestimonials={coachingTestimonials.map((t) => ({
+          testimonials={hubTestimonials.map((t) => ({
             id: t.id,
             clientName: t.clientName,
             duration: t.duration,
@@ -211,8 +188,7 @@ export default async function HomePage() {
                 Ready To Transform?
               </h2>
               <p className="text-white/60 text-lg leading-relaxed mb-10 max-w-[550px] mx-auto">
-                Stop putting it off. Whether you start with The Hub or go all-in with
-                coaching, the best time to begin was yesterday. The second best time is now.
+                Stop putting it off. The best time to start was yesterday. The second best time is now.
               </p>
               <div className="flex flex-wrap justify-center gap-4">
                 <Link
@@ -220,12 +196,6 @@ export default async function HomePage() {
                   className="bg-[#E51A1A] hover:bg-[#C41010] text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
                 >
                   Get The Hub &mdash; &euro;79
-                </Link>
-                <Link
-                  href="/coaching/apply"
-                  className="border border-white/30 hover:border-white/60 text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
-                >
-                  Apply for Coaching
                 </Link>
               </div>
             </div>

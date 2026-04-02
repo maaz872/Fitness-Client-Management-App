@@ -53,7 +53,7 @@ export default function AboutPage() {
             <p className="text-white/70 leading-relaxed">
               Coach Raheel is a qualified Athletic Therapist (B.Sc Hons) and certified
               Personal Trainer with years of hands-on experience in fat loss, body
-              recomposition, and performance coaching. His background in both clinical
+              recomposition, and performance training. His background in both clinical
               rehabilitation and strength training gives him a unique edge when it comes
               to designing programmes that are safe, effective, and built to last.
             </p>
@@ -103,11 +103,11 @@ export default function AboutPage() {
             What We Offer
           </h2>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-[900px] mx-auto">
+          <div className="max-w-[500px] mx-auto">
             {/* The Hub Card */}
             <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-8">
               <div className="inline-block bg-[#FF6B00]/10 text-[#FF6B00] text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full mb-4">
-                Self-Guided
+                Your Nutrition Toolkit
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">The Hub</h3>
               <p className="text-white/60 text-sm leading-relaxed mb-6">
@@ -117,30 +117,10 @@ export default function AboutPage() {
                 of &euro;79.
               </p>
               <Link
-                href="/nutrition"
-                className="inline-block bg-[#FF6B00] hover:bg-[#E56000] text-white font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-wider transition-colors"
-              >
-                Learn More
-              </Link>
-            </div>
-
-            {/* Coaching Card */}
-            <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-8">
-              <div className="inline-block bg-[#E51A1A]/10 text-[#E51A1A] text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full mb-4">
-                1:1 Coaching
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-2">Coaching</h3>
-              <p className="text-white/60 text-sm leading-relaxed mb-6">
-                Get a fully personalised training and nutrition programme from Coach
-                Raheel. Weekly check-ins, direct messaging support, programme
-                adjustments, and full Hub access included. Packages starting from
-                &euro;399.
-              </p>
-              <Link
-                href="/coaching/apply"
+                href="/checkout"
                 className="inline-block bg-[#E51A1A] hover:bg-[#C41010] text-white font-bold px-6 py-3 rounded-xl text-sm uppercase tracking-wider transition-colors"
               >
-                Apply Now
+                Get The Hub
               </Link>
             </div>
           </div>
@@ -154,8 +134,8 @@ export default function AboutPage() {
             Ready To Get Started?
           </h2>
           <p className="text-white/60 text-lg leading-relaxed mb-10">
-            Whether you go self-guided with The Hub or get 1:1 support from Coach
-            Raheel, your transformation starts today.
+            Take control of your nutrition with The Hub. Your transformation
+            starts today.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
@@ -163,12 +143,6 @@ export default function AboutPage() {
               className="bg-[#E51A1A] hover:bg-[#C41010] text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
             >
               Get The Hub &mdash; &euro;79
-            </Link>
-            <Link
-              href="/coaching/apply"
-              className="border border-white/30 hover:border-white/60 text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
-            >
-              Apply for Coaching
             </Link>
           </div>
         </div>

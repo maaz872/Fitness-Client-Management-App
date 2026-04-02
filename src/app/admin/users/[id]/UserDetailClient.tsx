@@ -75,9 +75,6 @@ type Tab = "meals" | "weight" | "photos" | "macros" | "favourites" | "messages";
 const PLAN_COLORS: Record<string, string> = {
   FREE: "bg-white/10 text-white/70",
   HUB: "bg-[#FF6B00]/20 text-[#FF6B00]",
-  COACHING_8WEEK: "bg-[#E51A1A]/20 text-[#E51A1A]",
-  COACHING_12WEEK: "bg-[#E51A1A]/20 text-[#E51A1A]",
-  COACHING_LONGTERM: "bg-[#FFB800]/20 text-[#FFB800]",
 };
 
 const STATUS_COLORS: Record<string, string> = {

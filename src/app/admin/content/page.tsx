@@ -21,12 +21,9 @@ export default function AdminContentPage() {
   const [heroHeadline, setHeroHeadline] = useState("");
   const [heroSubtitle, setHeroSubtitle] = useState("");
 
-  // Pricing
+  // Pricing (Hub only)
   const [hubPrice, setHubPrice] = useState(0);
   const [hubOldPrice, setHubOldPrice] = useState(0);
-  const [coaching8WeekPrice, setCoaching8WeekPrice] = useState(0);
-  const [coaching12WeekPrice, setCoaching12WeekPrice] = useState(0);
-  const [coachingLongTermPrice, setCoachingLongTermPrice] = useState(0);
 
   // Social Media
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -42,8 +39,6 @@ export default function AdminContentPage() {
   const [showTestimonials, setShowTestimonials] = useState(true);
   const [showTransformations, setShowTransformations] = useState(true);
   const [showCountdown, setShowCountdown] = useState(true);
-  const [showCoaching, setShowCoaching] = useState(true);
-  const [acceptCoachingApps, setAcceptCoachingApps] = useState(true);
 
   // About
   const [aboutHeading, setAboutHeading] = useState("");
@@ -60,9 +55,6 @@ export default function AdminContentPage() {
         // Pricing
         if (data.hub_price) setHubPrice(Number(data.hub_price));
         if (data.hub_old_price) setHubOldPrice(Number(data.hub_old_price));
-        if (data.coaching_8week_price) setCoaching8WeekPrice(Number(data.coaching_8week_price));
-        if (data.coaching_12week_price) setCoaching12WeekPrice(Number(data.coaching_12week_price));
-        if (data.coaching_longterm_price) setCoachingLongTermPrice(Number(data.coaching_longterm_price));
         // Social
         if (data.social_youtube_url) setYoutubeUrl(data.social_youtube_url);
         if (data.social_youtube_visible !== undefined) setYoutubeVisible(data.social_youtube_visible === "true");
@@ -76,8 +68,6 @@ export default function AdminContentPage() {
         if (data.show_testimonials !== undefined) setShowTestimonials(data.show_testimonials === "true");
         if (data.show_transformations !== undefined) setShowTransformations(data.show_transformations === "true");
         if (data.show_countdown !== undefined) setShowCountdown(data.show_countdown === "true");
-        if (data.show_coaching !== undefined) setShowCoaching(data.show_coaching === "true");
-        if (data.accept_coaching_apps !== undefined) setAcceptCoachingApps(data.accept_coaching_apps === "true");
         // About
         if (data.about_heading) setAboutHeading(data.about_heading);
         if (data.about_bio) setAboutBio(data.about_bio);
@@ -127,9 +117,6 @@ export default function AdminContentPage() {
     saveEntries("pricing", {
       hub_price: String(hubPrice),
       hub_old_price: String(hubOldPrice),
-      coaching_8week_price: String(coaching8WeekPrice),
-      coaching_12week_price: String(coaching12WeekPrice),
-      coaching_longterm_price: String(coachingLongTermPrice),
     });
   }
 
@@ -151,8 +138,6 @@ export default function AdminContentPage() {
       show_testimonials: String(showTestimonials),
       show_transformations: String(showTransformations),
       show_countdown: String(showCountdown),
-      show_coaching: String(showCoaching),
-      accept_coaching_apps: String(acceptCoachingApps),
     });
   }
 
@@ -278,41 +263,6 @@ export default function AdminContentPage() {
                   type="number"
                   value={hubOldPrice}
                   onChange={(e) => setHubOldPrice(Number(e.target.value))}
-                  className={inputCls}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs text-white/40 uppercase tracking-wide block mb-1">
-                  Coaching 8-Week Price
-                </label>
-                <input
-                  type="number"
-                  value={coaching8WeekPrice}
-                  onChange={(e) => setCoaching8WeekPrice(Number(e.target.value))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-white/40 uppercase tracking-wide block mb-1">
-                  Coaching 12-Week Price
-                </label>
-                <input
-                  type="number"
-                  value={coaching12WeekPrice}
-                  onChange={(e) => setCoaching12WeekPrice(Number(e.target.value))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className="text-xs text-white/40 uppercase tracking-wide block mb-1">
-                  Coaching Long-Term (Per Month)
-                </label>
-                <input
-                  type="number"
-                  value={coachingLongTermPrice}
-                  onChange={(e) => setCoachingLongTermPrice(Number(e.target.value))}
                   className={inputCls}
                 />
               </div>
@@ -463,17 +413,6 @@ export default function AdminContentPage() {
                 label="Show Countdown Timer"
                 checked={showCountdown}
                 onChange={setShowCountdown}
-              />
-              <VisibilityRow
-                label="Show Coaching Section"
-                checked={showCoaching}
-                onChange={setShowCoaching}
-              />
-              <VisibilityRow
-                label="Accept Coaching Applications"
-                description="When off, the coaching application form will be hidden."
-                checked={acceptCoachingApps}
-                onChange={setAcceptCoachingApps}
               />
             </div>
             <button onClick={saveVisibility} className={saveBtnCls(sections.visibility.saving)}>

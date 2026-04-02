@@ -6,18 +6,18 @@ const stats = [
   { label: "Revenue", value: "\u20AC19,513", icon: "\uD83D\uDCB0", change: "247 \u00D7 \u20AC79" },
   { label: "Active Users (30d)", value: "189", icon: "\u2705", change: "76% of total" },
   { label: "Newsletter Subs", value: "1,432", icon: "\u2709", change: "+89 this month" },
-  { label: "Pending Coaching Apps", value: "3", icon: "\uD83D\uDCCB", change: "Needs review" },
+  { label: "Total Recipes", value: "412", icon: "\uD83C\uDF74", change: "In The Hub" },
 ];
 
 const quickActions = [
   { label: "Add Recipe", href: "/admin/recipes/new", icon: "\uD83C\uDF74", description: "Create a new recipe for the hub" },
   { label: "Add Testimonial", href: "/admin/testimonials/new", icon: "\u2B50", description: "Add a client transformation" },
-  { label: "View Applications", href: "/admin/coaching", icon: "\uD83D\uDCCB", description: "Review coaching applications" },
+  { label: "Manage Users", href: "/admin/users", icon: "\uD83D\uDC65", description: "View and manage all users" },
 ];
 
 const recentActivity = [
   { time: "2 hours ago", text: "New user registered: Sarah M." },
-  { time: "5 hours ago", text: "Coaching application received from James K." },
+  { time: "5 hours ago", text: "New Hub purchase from James K." },
   { time: "Yesterday", text: "Recipe published: High-Protein Chicken Wrap" },
   { time: "Yesterday", text: "Testimonial updated: Mark D. (12-week transformation)" },
   { time: "2 days ago", text: "Newsletter sent to 1,432 subscribers" },
