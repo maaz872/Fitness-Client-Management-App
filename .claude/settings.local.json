@@ -39,7 +39,8 @@
       "Bash(mv testimonials:*)",
       "Bash(mv newsletter:*)",
       "Bash(rm -rf coaching)",
-      "Bash(rm -rf api/coaching)"
+      "Bash(rm -rf api/coaching)",
+      "WebFetch(domain:level-up-v1-tau.vercel.app)"
     ]
   }
 }

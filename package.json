@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
+    "@neondatabase/serverless": "^1.0.2",
     "@prisma/adapter-better-sqlite3": "^7.6.0",
     "@prisma/adapter-libsql": "^7.6.0",
     "@prisma/adapter-pg": "^7.6.0",
+    "@prisma/adapter-pg-worker": "^6.9.0",
     "@prisma/client": "^7.6.0",
     "@types/better-sqlite3": "^7.6.13",
     "bcryptjs": "^3.0.3",
