@@ -56,7 +56,12 @@
       "Bash(npx tsx -e \":*)",
       "Bash(curl -s \"https://level-up-v1-tau.vercel.app/api/auth/login\" -X POST -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"admin@levelup.com\"\",\"\"password\"\":\"\"test\"\"}')",
       "Bash(curl -s \"https://level-up-v1-tau.vercel.app/about\")",
-      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/nutrition\")"
+      "Bash(curl -s \"https://level-up-v1-tau.vercel.app/nutrition\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 20 \"https://level-up-v1-tau.vercel.app/api/recipes\")",
+      "Bash(curl -v \"https://level-up-v1-tau.vercel.app/api/site-settings\")",
+      "Bash(curl -s -w \"\\\\nHTTP_CODE:%{http_code}\" \"https://level-up-v1-tau.vercel.app/api/site-settings\")",
+      "Bash(curl -s -w \"\\\\nHTTP:%{http_code}\" \"http://localhost:3000/api/site-settings\")",
+      "Bash(taskkill /IM node.exe /F)"
     ]
   }
 }

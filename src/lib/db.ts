@@ -1,13 +1,12 @@
 import { PrismaClient } from "@/generated/prisma/client";
-import { PrismaNeonHttp } from "@prisma/adapter-neon";
-import { neon } from "@neondatabase/serverless";
+import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { _prisma?: InstanceType<typeof PrismaClient> };
 
 export function getDb(): InstanceType<typeof PrismaClient> {
   if (!globalForPrisma._prisma) {
-    const sql = neon(process.env.DATABASE_URL!);
-    const adapter = new (PrismaNeonHttp as any)(sql);
+    const url = process.env.DIRECT_URL || process.env.DATABASE_URL!;
+    const adapter = new (PrismaPg as any)(url);
     globalForPrisma._prisma = new (PrismaClient as any)({ adapter });
   }
   return globalForPrisma._prisma!;
