@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as { _prisma?: InstanceType<typeof
 export function getDb(): InstanceType<typeof PrismaClient> {
   if (!globalForPrisma._prisma) {
     const sql = neon(process.env.DATABASE_URL!);
-    const adapter = new PrismaNeonHttp(sql);
+    const adapter = new (PrismaNeonHttp as any)(sql);
     globalForPrisma._prisma = new (PrismaClient as any)({ adapter });
   }
   return globalForPrisma._prisma!;
