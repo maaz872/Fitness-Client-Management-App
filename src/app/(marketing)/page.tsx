@@ -41,33 +41,58 @@ export default async function HomePage() {
   return (
     <>
       {/* ── Section 1: Hero ── */}
-      <section className="relative min-h-[90vh] flex items-center w-full overflow-hidden">
-        <Image
-          src="/images/Coach_Hero.svg"
-          alt="Coach Raheel in the gym"
-          fill
-          priority
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40" />
-        <div className="relative z-10 max-w-[1200px] mx-auto px-6 py-20">
-          <span className="inline-block bg-[#E51A1A]/10 border border-[#E51A1A]/30 text-[#E51A1A] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6">
-            Transform Your Physique
-          </span>
-          <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight">
-            Build The Body<br />You Deserve.
-          </h1>
-          <p className="text-white/70 text-lg md:text-xl max-w-[600px] mb-10 leading-relaxed">
-            Level Up gives you the proven nutrition tools, recipes, and tracking system
-            you need to lose fat, build lean muscle, and keep it off for good.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <Link
-              href="/nutrition"
-              className="bg-[#E51A1A] hover:bg-[#C41010] text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
-            >
-              Get The Hub &mdash; &euro;79
-            </Link>
+      <section className="relative min-h-[90vh] w-full overflow-hidden bg-[#0A0A0A]">
+        {/* Mobile: background image */}
+        <div className="lg:hidden absolute inset-0">
+          <Image
+            src="/images/Coach_Hero.svg"
+            alt="Coach Raheel"
+            fill
+            priority
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/40" />
+        </div>
+
+        {/* Desktop: side-by-side layout */}
+        <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 min-h-[90vh] flex items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center w-full py-20">
+            {/* Left: Text */}
+            <div>
+              <span className="inline-block bg-[#E51A1A]/10 border border-[#E51A1A]/30 text-[#E51A1A] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-6">
+                Transform Your Physique
+              </span>
+              <h1 className="text-5xl md:text-7xl font-black text-white mb-6 leading-tight">
+                Build The Body<br />You Deserve.
+              </h1>
+              <p className="text-white/70 text-lg md:text-xl max-w-[600px] mb-10 leading-relaxed">
+                Level Up gives you the proven nutrition tools, recipes, and tracking system
+                you need to lose fat, build lean muscle, and keep it off for good.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Link
+                  href="/nutrition"
+                  className="bg-[#E51A1A] hover:bg-[#C41010] text-white font-bold px-8 py-4 rounded-xl text-sm uppercase tracking-wider transition-colors"
+                >
+                  Get The Hub &mdash; &euro;79
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: Coach image (desktop only) */}
+            <div className="hidden lg:flex justify-center items-end">
+              <div className="relative w-full max-w-[500px] h-[600px]">
+                <Image
+                  src="/images/Coach_Hero.svg"
+                  alt="Coach Raheel"
+                  fill
+                  priority
+                  className="object-contain object-bottom"
+                />
+                {/* Subtle glow behind the image */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#E51A1A]/10 via-transparent to-transparent rounded-3xl -z-10" />
+              </div>
+            </div>
           </div>
         </div>
       </section>
