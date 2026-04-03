@@ -41,6 +41,7 @@ const sidebarGroups = [
   {
     label: "ACCOUNT",
     links: [
+      { href: "/hub/health-profile", label: "Health Profile" },
       { href: "/hub/messages", label: "Messages" },
       { href: "/hub/notifications", label: "Notifications" },
       { href: "/hub/settings", label: "Settings" },

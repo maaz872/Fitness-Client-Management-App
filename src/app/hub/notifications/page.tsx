@@ -109,9 +109,9 @@ export default function HubNotificationsPage() {
   ];
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-3xl w-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-white">Notifications</h1>
         {unreadCount > 0 && (
           <button
@@ -124,7 +124,7 @@ export default function HubNotificationsPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-1.5">
         {filterTabs.map((t) => (
           <button
             key={t.key}

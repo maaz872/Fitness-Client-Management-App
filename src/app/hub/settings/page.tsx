@@ -308,164 +308,19 @@ export default function SettingsPage() {
         </form>
       </div>
 
-      {/* Health Profile */}
-      <div className="bg-[#1E1E1E] rounded-2xl shadow-card p-8 mb-6">
-        <h2 className="text-lg font-bold mb-2">Health Profile</h2>
-        <p className="text-white/40 text-sm mb-5">
-          Fill in your health data to personalise calculators and recommendations.
-        </p>
-        <form onSubmit={handleHealthSave} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold text-sm mb-1.5">Age</label>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                placeholder="e.g. 25"
-                min={13}
-                max={100}
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-sm mb-1.5">Gender</label>
-              <div className="flex gap-2 h-[50px]">
-                {["male", "female"].map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    onClick={() => setGender(g)}
-                    className={`flex-1 rounded-xl font-semibold text-sm transition-colors cursor-pointer border-2 ${
-                      gender === g
-                        ? "bg-[#E51A1A] text-white border-[#E51A1A]"
-                        : "bg-[#1E1E1E] text-white/60 border-[#2A2A2A] hover:border-[#E51A1A]/50"
-                    }`}
-                  >
-                    {g === "male" ? "Male" : "Female"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold text-sm mb-1.5">Height (cm)</label>
-              <input
-                type="number"
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value)}
-                placeholder="e.g. 175"
-                step="0.1"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-sm mb-1.5">Current Weight (kg)</label>
-              <input
-                type="number"
-                value={currentWeightKg}
-                onChange={(e) => setCurrentWeightKg(e.target.value)}
-                placeholder="e.g. 80"
-                step="0.1"
-                className={inputCls}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block font-semibold text-sm mb-1.5">
-                Body Fat % <span className="text-white/30 font-normal">(optional)</span>
-              </label>
-              <input
-                type="number"
-                value={bodyFatPercent}
-                onChange={(e) => setBodyFatPercent(e.target.value)}
-                placeholder="e.g. 18"
-                step="0.1"
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className="block font-semibold text-sm mb-1.5">
-                Target Weight (kg) <span className="text-white/30 font-normal">(optional)</span>
-              </label>
-              <input
-                type="number"
-                value={targetWeightKg}
-                onChange={(e) => setTargetWeightKg(e.target.value)}
-                placeholder="e.g. 75"
-                step="0.1"
-                className={inputCls}
-              />
-            </div>
-          </div>
-
+      {/* Health Profile Link */}
+      <div className="bg-[#1E1E1E] rounded-2xl border border-[#2A2A2A] p-6 mb-6">
+        <div className="flex items-center justify-between">
           <div>
-            <label className="block font-semibold text-sm mb-1.5">Fitness Goal</label>
-            <select
-              value={fitnessGoal}
-              onChange={(e) => setFitnessGoal(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Select a goal</option>
-              {FITNESS_GOALS.map((g) => (
-                <option key={g.value} value={g.value}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
+            <h2 className="text-base font-bold text-white">Health Profile</h2>
+            <p className="text-white/40 text-sm mt-1">Age, weight, goals, dietary preferences</p>
           </div>
-
-          <div>
-            <label className="block font-semibold text-sm mb-1.5">Activity Level</label>
-            <select
-              value={activityLevel}
-              onChange={(e) => setActivityLevel(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Select activity level</option>
-              {ACTIVITY_LEVELS.map((a) => (
-                <option key={a.value} value={a.value}>
-                  {a.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-sm mb-2">Dietary Preferences</label>
-            <div className="flex flex-wrap gap-2">
-              {DIETARY_OPTIONS.map((pref) => (
-                <button
-                  key={pref}
-                  type="button"
-                  onClick={() => toggleDietaryPref(pref)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors cursor-pointer border-2 ${
-                    dietaryPrefs.includes(pref)
-                      ? "bg-[#E51A1A] text-white border-[#E51A1A]"
-                      : "bg-[#1E1E1E] text-white/60 border-[#2A2A2A] hover:border-[#E51A1A]/50"
-                  }`}
-                >
-                  {pref}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {healthMsg && (
-            <p className={`text-sm font-semibold ${healthMsg.includes("saved") ? "text-green-500" : "text-[#E51A1A]"}`}>
-              {healthMsg}
-            </p>
-          )}
-
-          <Button type="submit">
-            {healthSaving ? "Saving..." : "Save Health Profile"}
-          </Button>
-        </form>
+          <a href="/hub/health-profile" className="px-4 py-2 bg-[#E51A1A] text-white text-sm font-semibold rounded-xl hover:bg-[#C41010] transition-colors">
+            Edit Profile
+          </a>
+        </div>
       </div>
+
 
       {/* Reminders */}
       <RemindersCard />
