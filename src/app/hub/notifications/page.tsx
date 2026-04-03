@@ -116,7 +116,7 @@ export default function HubNotificationsPage() {
         {unreadCount > 0 && (
           <button
             onClick={markAllRead}
-            className="px-4 py-2 rounded-xl text-sm font-medium bg-[#1E1E1E] text-white/60 hover:text-white border border-[#2A2A2A] cursor-pointer transition-colors"
+            className="px-4 py-2 rounded-xl text-sm font-medium bg-[#1E1E1E] text-white/60 hover:text-white border border-[#2A2A2A] cursor-pointer transition-colors min-h-[44px]"
           >
             Mark All Read
           </button>
@@ -129,7 +129,7 @@ export default function HubNotificationsPage() {
           <button
             key={t.key}
             onClick={() => setFilter(t.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
+            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap cursor-pointer border-none transition-colors min-h-[44px] ${
               filter === t.key
                 ? "bg-[#E51A1A] text-white"
                 : "bg-[#1E1E1E] text-white/50 hover:text-white"
@@ -182,7 +182,7 @@ export default function HubNotificationsPage() {
                       <span className="w-2 h-2 rounded-full bg-[#E51A1A] shrink-0" />
                     )}
                   </div>
-                  <p className="text-sm text-white/60 mt-0.5">{n.message}</p>
+                  <p className="text-sm text-white/60 mt-0.5 break-words">{n.message}</p>
                   <p className="text-xs text-white/30 mt-1">{timeAgo(n.createdAt)}</p>
                 </div>
               </div>

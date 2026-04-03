@@ -194,7 +194,7 @@ export default function HubDashboard() {
           <Link
             key={link.href}
             href={link.href}
-            className="bg-[#1E1E1E] border border-[#2A2A2A] p-5 rounded-2xl hover:border-[#E51A1A]/30 transition-all hover:-translate-y-0.5 group"
+            className="bg-[#1E1E1E] border border-[#2A2A2A] p-5 rounded-2xl hover:border-[#E51A1A]/30 transition-all hover:-translate-y-0.5 group min-h-[80px]"
           >
             <h3 className="font-bold text-sm text-white mb-1 group-hover:text-[#E51A1A] transition-colors">
               {link.label}

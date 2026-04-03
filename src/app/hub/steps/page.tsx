@@ -304,7 +304,7 @@ export default function StepsPage() {
   }
 
   return (
-    <div>
+    <div className="w-full overflow-hidden">
       <h1 className="text-3xl font-black mb-2">Step Tracker</h1>
       <p className="text-white/50 mb-6">Track your daily steps and hit your goals.</p>
 
@@ -322,13 +322,13 @@ export default function StepsPage() {
           <div className="flex gap-3 mt-6">
             <button
               onClick={() => { setShowLogForm(!showLogForm); setShowGoalEdit(false); }}
-              className="px-5 py-2.5 bg-[#E51A1A] text-white rounded-xl font-semibold text-sm cursor-pointer border-none hover:bg-[#C41616] transition-colors"
+              className="px-5 py-2.5 bg-[#E51A1A] text-white rounded-xl font-semibold text-sm cursor-pointer border-none hover:bg-[#C41616] transition-colors min-h-[44px]"
             >
               Log Steps
             </button>
             <button
               onClick={() => { setShowGoalEdit(!showGoalEdit); setShowLogForm(false); }}
-              className="px-5 py-2.5 bg-[#2A2A2A] text-white/70 rounded-xl font-semibold text-sm cursor-pointer border-none hover:bg-[#333] transition-colors"
+              className="px-5 py-2.5 bg-[#2A2A2A] text-white/70 rounded-xl font-semibold text-sm cursor-pointer border-none hover:bg-[#333] transition-colors min-h-[44px]"
             >
               Edit Goal
             </button>
@@ -342,12 +342,12 @@ export default function StepsPage() {
                 value={stepsInput}
                 onChange={(e) => setStepsInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleLogSteps()}
-                className="flex-1 border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm"
+                className="flex-1 border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm min-h-[44px]"
               />
               <button
                 onClick={handleLogSteps}
                 disabled={saving}
-                className="px-4 py-2.5 bg-[#E51A1A] text-white rounded-xl font-semibold text-sm cursor-pointer border-none"
+                className="px-4 py-2.5 bg-[#E51A1A] text-white rounded-xl font-semibold text-sm cursor-pointer border-none min-h-[44px]"
               >
                 {saving ? "..." : "Save"}
               </button>
@@ -362,12 +362,12 @@ export default function StepsPage() {
                 value={goalInput}
                 onChange={(e) => setGoalInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleUpdateGoal()}
-                className="flex-1 border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm"
+                className="flex-1 border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm min-h-[44px]"
               />
               <button
                 onClick={handleUpdateGoal}
                 disabled={saving}
-                className="px-4 py-2.5 bg-[#FF6B00] text-white rounded-xl font-semibold text-sm cursor-pointer border-none"
+                className="px-4 py-2.5 bg-[#FF6B00] text-white rounded-xl font-semibold text-sm cursor-pointer border-none min-h-[44px]"
               >
                 {saving ? "..." : "Set"}
               </button>
@@ -428,54 +428,100 @@ export default function StepsPage() {
         <div className="p-6 pb-3">
           <h2 className="text-lg font-bold">History (Last {days} days)</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#2A2A2A] text-left">
-                <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Date</th>
-                <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Steps</th>
-                <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Goal</th>
-                <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Met?</th>
-                <th className="px-6 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {historyLogs.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-white/30">
-                    No step data yet. Log your first steps above to start tracking.
-                  </td>
+        {/* Mobile card view */}
+        <div className="sm:hidden space-y-2 px-4 pb-4">
+          {historyLogs.length === 0 ? (
+            <p className="py-12 text-center text-white/30">
+              No step data yet. Log your first steps above to start tracking.
+            </p>
+          ) : (
+            historyLogs.map((log) => {
+              const met = log.steps >= log.goal;
+              return (
+                <div key={log.loggedDate} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-white">{fmtDateFull(log.loggedDate)}</p>
+                    <div className="flex items-center gap-2">
+                      {met ? (
+                        <span className="text-green-400 font-bold text-base">&#10003;</span>
+                      ) : (
+                        <span className="text-[#E51A1A] font-bold text-base">&#10007;</span>
+                      )}
+                      <button
+                        onClick={() => handleDelete(log.loggedDate)}
+                        className="text-white/20 hover:text-[#E51A1A] transition-colors cursor-pointer bg-transparent border-none text-xs min-h-[44px] px-2"
+                        title="Delete entry"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-white/40 text-xs">Steps</span>
+                      <p className="text-white font-medium">{log.steps.toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-white/40 text-xs">Goal</span>
+                      <p className="text-white/50 font-medium">{log.goal.toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        {/* Desktop table view */}
+        <div className="hidden sm:block">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[#2A2A2A] text-left">
+                  <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Date</th>
+                  <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Steps</th>
+                  <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Goal</th>
+                  <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Met?</th>
+                  <th className="px-6 py-3" />
                 </tr>
-              ) : (
-                historyLogs.map((log) => {
-                  const met = log.steps >= log.goal;
-                  return (
-                    <tr key={log.loggedDate} className="border-b border-[#1A1A1A] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-6 py-3 font-medium">{fmtDateFull(log.loggedDate)}</td>
-                      <td className="px-6 py-3">{log.steps.toLocaleString()}</td>
-                      <td className="px-6 py-3 text-white/50">{log.goal.toLocaleString()}</td>
-                      <td className="px-6 py-3">
-                        {met ? (
-                          <span className="text-green-400 font-bold text-base">&#10003;</span>
-                        ) : (
-                          <span className="text-[#E51A1A] font-bold text-base">&#10007;</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-3 text-right">
-                        <button
-                          onClick={() => handleDelete(log.loggedDate)}
-                          className="text-white/20 hover:text-[#E51A1A] transition-colors cursor-pointer bg-transparent border-none text-sm"
-                          title="Delete entry"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {historyLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-white/30">
+                      No step data yet. Log your first steps above to start tracking.
+                    </td>
+                  </tr>
+                ) : (
+                  historyLogs.map((log) => {
+                    const met = log.steps >= log.goal;
+                    return (
+                      <tr key={log.loggedDate} className="border-b border-[#1A1A1A] hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-3 font-medium">{fmtDateFull(log.loggedDate)}</td>
+                        <td className="px-6 py-3">{log.steps.toLocaleString()}</td>
+                        <td className="px-6 py-3 text-white/50">{log.goal.toLocaleString()}</td>
+                        <td className="px-6 py-3">
+                          {met ? (
+                            <span className="text-green-400 font-bold text-base">&#10003;</span>
+                          ) : (
+                            <span className="text-[#E51A1A] font-bold text-base">&#10007;</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-3 text-right">
+                          <button
+                            onClick={() => handleDelete(log.loggedDate)}
+                            className="text-white/20 hover:text-[#E51A1A] transition-colors cursor-pointer bg-transparent border-none text-sm"
+                            title="Delete entry"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

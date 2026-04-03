@@ -145,7 +145,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  function StatsSection() {
+  function StatsSection({ onNavigate }: { onNavigate?: () => void }) {
     return (
       <div className="px-5 py-4 border-t border-[#1A1A1A] space-y-3">
         <p className="text-[10px] font-bold text-white/25 uppercase tracking-[2px]">
@@ -208,18 +208,21 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
         <div className="flex gap-2 pt-1">
           <Link
             href="/hub/snap-my-macros"
+            onClick={onNavigate}
             className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-2 rounded-lg bg-[#E51A1A]/10 text-[#E51A1A] hover:bg-[#E51A1A]/20 hover:-translate-y-0.5 transition-all"
           >
             🍽 Meal
           </Link>
           <Link
             href="/hub/progress"
+            onClick={onNavigate}
             className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-2 rounded-lg bg-[#FF6B00]/10 text-[#FF6B00] hover:bg-[#FF6B00]/20 hover:-translate-y-0.5 transition-all"
           >
             ⚖ Weight
           </Link>
           <Link
             href="/hub/steps"
+            onClick={onNavigate}
             className="flex-1 flex items-center justify-center gap-1 text-[10px] font-semibold py-2 rounded-lg bg-[#FFB800]/10 text-[#FFB800] hover:bg-[#FFB800]/20 hover:-translate-y-0.5 transition-all"
           >
             👣 Steps
@@ -330,7 +333,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Mobile stats */}
-        <StatsSection />
+        <StatsSection onNavigate={() => setSidebarOpen(false)} />
 
         {/* Mobile logout */}
         <div

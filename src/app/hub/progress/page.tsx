@@ -425,14 +425,14 @@ export default function ProgressPage() {
   const selectedPhotos = photosData.filter((p) => compareSelection.includes(p.id));
 
   const inputCls =
-    "w-full border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm placeholder:text-white/30";
+    "w-full border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm placeholder:text-white/30 min-h-[44px]";
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-white/30">Loading...</div>;
   }
 
   return (
-    <div>
+    <div className="w-full overflow-hidden">
       <h1 className="text-3xl font-black mb-2">Progress Tracker</h1>
       <p className="text-white/50 mb-6">
         Track your body measurements and transformation over time.
@@ -444,7 +444,7 @@ export default function ProgressPage() {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-200 cursor-pointer border-none ${
+            className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-200 cursor-pointer border-none min-h-[44px] ${
               activeTab === tab
                 ? "bg-[#E51A1A] text-white shadow-md"
                 : "bg-[#1E1E1E] text-white/60 border border-[#2A2A2A]"
@@ -569,7 +569,7 @@ export default function ProgressPage() {
             <button
               onClick={handleLogMeasurement}
               disabled={saving}
-              className="px-8 py-3 bg-[#E51A1A] text-white rounded-xl font-bold text-sm cursor-pointer border-none hover:bg-[#C41616] transition-colors"
+              className="px-8 py-3 bg-[#E51A1A] text-white rounded-xl font-bold text-sm cursor-pointer border-none hover:bg-[#C41616] transition-colors min-h-[48px]"
             >
               {saving ? "Saving..." : "Save Measurement"}
             </button>
@@ -643,58 +643,110 @@ export default function ProgressPage() {
             <div className="p-6 pb-3">
               <h2 className="text-lg font-bold">Measurement Log</h2>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[#2A2A2A] text-left">
-                    <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Date</th>
-                    <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Weight</th>
-                    <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Belly</th>
-                    <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Waist</th>
-                    <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Change</th>
-                    <th className="px-6 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableEntries.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-white/30">
-                        No measurements yet. Log your first measurement above to start tracking.
-                      </td>
-                    </tr>
-                  ) : (
-                    tableEntries.map((entry) => (
-                      <tr
-                        key={entry.id}
-                        className="border-b border-[#1A1A1A] hover:bg-white/[0.02] transition-colors"
+            {/* Mobile card view */}
+            <div className="sm:hidden space-y-2 px-4 pb-4">
+              {tableEntries.length === 0 ? (
+                <p className="py-12 text-center text-white/30">
+                  No measurements yet. Log your first measurement above to start tracking.
+                </p>
+              ) : (
+                tableEntries.map((entry) => (
+                  <div key={entry.id} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-white">{fmtDateFull(entry.loggedDate)}</p>
+                      <button
+                        onClick={() => handleDelete(entry.id)}
+                        className="text-white/20 hover:text-[#E51A1A] transition-colors cursor-pointer bg-transparent border-none text-xs min-h-[44px] px-2"
+                        title="Delete entry"
                       >
-                        <td className="px-6 py-3 font-medium">{fmtDateFull(entry.loggedDate)}</td>
-                        <td className="px-6 py-3">{entry.weightKg !== null ? `${entry.weightKg} kg` : "--"}</td>
-                        <td className="px-6 py-3">{entry.bellyInches !== null ? `${entry.bellyInches} in` : "--"}</td>
-                        <td className="px-6 py-3">{entry.waistInches !== null ? `${entry.waistInches} in` : "--"}</td>
-                        <td className="px-6 py-3">
+                        Delete
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-white/40 text-xs">Weight</span>
+                        <p className="text-white font-medium">{entry.weightKg !== null ? `${entry.weightKg} kg` : "--"}</p>
+                      </div>
+                      <div>
+                        <span className="text-white/40 text-xs">Belly</span>
+                        <p className="text-white font-medium">{entry.bellyInches !== null ? `${entry.bellyInches} in` : "--"}</p>
+                      </div>
+                      <div>
+                        <span className="text-white/40 text-xs">Waist</span>
+                        <p className="text-white font-medium">{entry.waistInches !== null ? `${entry.waistInches} in` : "--"}</p>
+                      </div>
+                      <div>
+                        <span className="text-white/40 text-xs">Change</span>
+                        <p className="font-medium">
                           {entry.weightChange !== null ? (
-                            <span className={`font-semibold ${entry.weightChange < 0 ? "text-green-400" : entry.weightChange > 0 ? "text-[#E51A1A]" : "text-white/30"}`}>
+                            <span className={entry.weightChange < 0 ? "text-green-400" : entry.weightChange > 0 ? "text-[#E51A1A]" : "text-white/30"}>
                               {entry.weightChange > 0 ? "+" : ""}{entry.weightChange} kg
                             </span>
                           ) : (
                             <span className="text-white/20">--</span>
                           )}
-                        </td>
-                        <td className="px-6 py-3 text-right">
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-white/20 hover:text-[#E51A1A] transition-colors cursor-pointer bg-transparent border-none text-sm"
-                            title="Delete entry"
-                          >
-                            Delete
-                          </button>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Desktop table view */}
+            <div className="hidden sm:block">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[#2A2A2A] text-left">
+                      <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Date</th>
+                      <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Weight</th>
+                      <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Belly</th>
+                      <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Waist</th>
+                      <th className="px-6 py-3 font-semibold text-white/40 text-xs uppercase tracking-wide">Change</th>
+                      <th className="px-6 py-3" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableEntries.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-white/30">
+                          No measurements yet. Log your first measurement above to start tracking.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      tableEntries.map((entry) => (
+                        <tr
+                          key={entry.id}
+                          className="border-b border-[#1A1A1A] hover:bg-white/[0.02] transition-colors"
+                        >
+                          <td className="px-6 py-3 font-medium">{fmtDateFull(entry.loggedDate)}</td>
+                          <td className="px-6 py-3">{entry.weightKg !== null ? `${entry.weightKg} kg` : "--"}</td>
+                          <td className="px-6 py-3">{entry.bellyInches !== null ? `${entry.bellyInches} in` : "--"}</td>
+                          <td className="px-6 py-3">{entry.waistInches !== null ? `${entry.waistInches} in` : "--"}</td>
+                          <td className="px-6 py-3">
+                            {entry.weightChange !== null ? (
+                              <span className={`font-semibold ${entry.weightChange < 0 ? "text-green-400" : entry.weightChange > 0 ? "text-[#E51A1A]" : "text-white/30"}`}>
+                                {entry.weightChange > 0 ? "+" : ""}{entry.weightChange} kg
+                              </span>
+                            ) : (
+                              <span className="text-white/20">--</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <button
+                              onClick={() => handleDelete(entry.id)}
+                              className="text-white/20 hover:text-[#E51A1A] transition-colors cursor-pointer bg-transparent border-none text-sm"
+                              title="Delete entry"
+                            >
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -736,7 +788,7 @@ export default function ProgressPage() {
                 <button
                   onClick={handleUploadPhoto}
                   disabled={!photoFile || photoSaving}
-                  className={`px-8 py-3 bg-[#E51A1A] text-white rounded-xl font-bold text-sm cursor-pointer border-none hover:bg-[#C41616] transition-colors ${!photoFile ? "opacity-50 pointer-events-none" : ""}`}
+                  className={`px-8 py-3 bg-[#E51A1A] text-white rounded-xl font-bold text-sm cursor-pointer border-none hover:bg-[#C41616] transition-colors min-h-[48px] ${!photoFile ? "opacity-50 pointer-events-none" : ""}`}
                 >
                   {photoSaving ? "Uploading..." : "Upload Photo"}
                 </button>

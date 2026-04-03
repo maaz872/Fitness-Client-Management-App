@@ -53,3 +53,9 @@ body {
 ::-webkit-scrollbar-track { background: #0A0A0A; }
 ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Mobile safe areas */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
