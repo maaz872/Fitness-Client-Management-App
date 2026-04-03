@@ -425,7 +425,7 @@ export default function ProgressPage() {
   const selectedPhotos = photosData.filter((p) => compareSelection.includes(p.id));
 
   const inputCls =
-    "w-full border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm placeholder:text-white/30 min-h-[44px]";
+    "w-full max-w-full box-border border-2 border-[#2A2A2A] rounded-xl py-2.5 px-3 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm placeholder:text-white/30 min-h-[44px] appearance-none";
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-white/30">Loading...</div>;
@@ -461,7 +461,7 @@ export default function ProgressPage() {
       {activeTab === "measurements" && (
         <div className="space-y-6">
           {/* Log Form */}
-          <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
+          <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-4 sm:p-6 overflow-hidden">
             <h2 className="text-lg font-bold mb-4">Log Measurement</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
               <div>

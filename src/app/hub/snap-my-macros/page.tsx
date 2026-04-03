@@ -496,7 +496,7 @@ export default function SnapMyMacrosPage() {
             type="date"
             value={logDate}
             onChange={(e) => setLogDate(e.target.value)}
-            className="w-full px-4 py-2.5 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl text-white text-sm focus:outline-none focus:border-[#E51A1A] [color-scheme:dark]"
+            className="w-full max-w-full box-border px-3 py-2.5 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl text-white text-sm focus:outline-none focus:border-[#E51A1A] [color-scheme:dark] appearance-none min-h-[44px]"
           />
 
           {/* Daily Totals */}
