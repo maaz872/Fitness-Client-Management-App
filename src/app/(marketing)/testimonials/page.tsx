@@ -21,8 +21,8 @@ export default async function TestimonialsPage() {
       <Section bg="cream">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Testimonials</h1>
-          <p className="text-lg text-gray-600">
-            Real transformations from real people.
+          <p className="text-lg text-white/50">
+            Real transformations from real people. See what our members have achieved.
           </p>
         </div>
 
