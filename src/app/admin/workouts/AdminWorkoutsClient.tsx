@@ -17,12 +17,15 @@ interface WorkoutRow {
   youtubeUrl?: string | null;
 }
 
+function extractYouTubeId(url: string): string {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/);
+  return match ? match[1] : "";
+}
+
 function getYoutubeThumbnail(url?: string | null): string | null {
   if (!url) return null;
-  const match = url.match(
-    /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
-  );
-  return match ? `https://img.youtube.com/vi/${match[1]}/mqdefault.jpg` : null;
+  const id = extractYouTubeId(url);
+  return id ? `https://img.youtube.com/vi/${id}/mqdefault.jpg` : null;
 }
 
 export default function AdminWorkoutsClient({
@@ -108,14 +111,21 @@ export default function AdminWorkoutsClient({
                 key={w.id}
                 className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl overflow-hidden hover:border-[#3A3A3A] transition-colors flex flex-col"
               >
-                {/* Thumbnail */}
+                {/* Thumbnail with play button overlay */}
                 <div className="relative w-full aspect-video bg-[#0A0A0A]">
                   {thumbnail ? (
-                    <img
-                      src={thumbnail}
-                      alt={w.title}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={thumbnail}
+                        alt={w.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-[#E51A1A]/90 flex items-center justify-center">
+                          <svg className="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <svg

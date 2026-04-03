@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+function extractYouTubeId(url: string): string {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]+)/);
+  return match ? match[1] : "";
+}
+
 interface PostUser {
   firstName: string;
   lastName: string;
@@ -310,6 +315,22 @@ export default function AdminFeedPage() {
                     <p className="text-white/90 text-sm whitespace-pre-wrap line-clamp-3">
                       {post.content}
                     </p>
+
+                    {/* YouTube embed */}
+                    {post.mediaType === "youtube" && post.mediaUrl && (
+                      <div className="mt-3 rounded-xl overflow-hidden">
+                        <iframe
+                          src={`https://www.youtube.com/embed/${extractYouTubeId(post.mediaUrl)}`}
+                          className="w-full aspect-video"
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        />
+                      </div>
+                    )}
+                    {/* Image */}
+                    {post.mediaType === "image" && post.mediaUrl && (
+                      <img src={post.mediaUrl} alt="Post media" className="mt-3 max-w-full rounded-xl max-h-[400px] object-cover" />
+                    )}
 
                     <div className="flex items-center gap-3 mt-3 flex-wrap">
                       {post.mediaType && (

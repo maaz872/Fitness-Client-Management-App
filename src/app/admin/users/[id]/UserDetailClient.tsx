@@ -29,7 +29,7 @@ function filterByRange<T extends { loggedDate: string }>(data: T[], range: strin
   return data.filter((d) => d.loggedDate.slice(0, 10) >= cutoffStr);
 }
 
-/* ── Types ─────────────────────────────────────────────────── */
+/* -- Types -------------------------------------------------------- */
 interface MacroTarget {
   calories: number;
   protein: number;
@@ -106,7 +106,6 @@ interface UserData {
   paymentScreenshot: string | null;
   paymentAccountName: string | null;
   paymentTransactionRef: string | null;
-  // Health profile
   age: number | null;
   gender: string | null;
   heightCm: number | null;
@@ -166,6 +165,7 @@ export default function UserDetailClient({ user }: { user: UserData }) {
   const [notifSending, setNotifSending] = useState(false);
   const [notifSuccess, setNotifSuccess] = useState("");
   const [photoModal, setPhotoModal] = useState<string | null>(null);
+  const [mealLogs, setMealLogs] = useState<MealLog[]>(user.mealLogs);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "overview", label: "Overview" },
@@ -208,8 +208,22 @@ export default function UserDetailClient({ user }: { user: UserData }) {
     }
   }
 
+  async function handleDeleteMeal(mealId: number) {
+    if (!confirm("Delete this meal log?")) return;
+    try {
+      const res = await fetch(`/api/admin/meals/${mealId}`, { method: "DELETE" });
+      if (res.ok) {
+        setMealLogs((prev) => prev.filter((m) => m.id !== mealId));
+      } else {
+        alert("Failed to delete meal");
+      }
+    } catch {
+      alert("Failed to delete meal");
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Back link */}
       <Link
         href="/admin/users"
@@ -221,20 +235,20 @@ export default function UserDetailClient({ user }: { user: UserData }) {
         Back to Users
       </Link>
 
-      {/* ── Profile Card ──────────────────────────────────── */}
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
+      {/* -- Profile Card ----------------------------------------- */}
+      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-4 sm:p-6">
         <div className="flex flex-col md:flex-row md:items-start gap-6">
           {/* Avatar + Info */}
-          <div className="flex-1 space-y-4">
+          <div className="flex-1 min-w-0 space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-xl font-bold shrink-0">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0">
                 {initials || "?"}
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-white">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
                   {user.firstName} {user.lastName}
                 </h1>
-                <p className="text-sm text-white/50 mt-0.5">{user.email}</p>
+                <p className="text-sm text-white/50 mt-0.5 truncate">{user.email}</p>
                 {user.country && <p className="text-xs text-white/40 mt-0.5">{user.country}</p>}
               </div>
             </div>
@@ -270,13 +284,13 @@ export default function UserDetailClient({ user }: { user: UserData }) {
               {user.paymentAccountName && (
                 <div>
                   <p className="text-white/40 text-xs uppercase tracking-wide">Payment Name</p>
-                  <p className="text-white mt-0.5">{user.paymentAccountName}</p>
+                  <p className="text-white mt-0.5 truncate">{user.paymentAccountName}</p>
                 </div>
               )}
               {user.paymentTransactionRef && (
                 <div>
                   <p className="text-white/40 text-xs uppercase tracking-wide">Transaction Ref</p>
-                  <p className="text-white mt-0.5">{user.paymentTransactionRef}</p>
+                  <p className="text-white mt-0.5 truncate">{user.paymentTransactionRef}</p>
                 </div>
               )}
             </div>
@@ -385,7 +399,7 @@ export default function UserDetailClient({ user }: { user: UserData }) {
                   <button
                     onClick={handleSendNotification}
                     disabled={notifSending || !notifTitle.trim() || !notifMessage.trim()}
-                    className="px-4 py-2 rounded-lg text-sm font-semibold bg-[#E51A1A] text-white hover:bg-[#E51A1A]/80 transition-colors cursor-pointer border-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[#E51A1A] text-white hover:bg-[#E51A1A]/80 transition-colors cursor-pointer border-none disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {notifSending ? "Sending..." : "Send"}
                   </button>
@@ -396,40 +410,42 @@ export default function UserDetailClient({ user }: { user: UserData }) {
 
           {/* Payment Screenshot */}
           {user.paymentScreenshot && (
-            <div className="shrink-0">
+            <div className="shrink-0 w-full md:w-auto">
               <p className="text-xs text-white/40 uppercase tracking-wide mb-2">Payment Screenshot</p>
               <img
                 src={user.paymentScreenshot}
                 alt="Payment screenshot"
                 onClick={() => setPhotoModal(user.paymentScreenshot)}
-                className="w-48 h-auto rounded-xl border border-[#2A2A2A] object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                className="w-full max-w-[280px] md:w-48 h-auto rounded-xl border border-[#2A2A2A] object-contain cursor-pointer hover:opacity-80 transition-opacity"
               />
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Tabs ──────────────────────────────────────────── */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
-              activeTab === t.key
-                ? "bg-[#E51A1A] text-white"
-                : "bg-[#1E1E1E] text-white/50 hover:text-white"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* -- Tabs -------------------------------------------------- */}
+      <div className="overflow-x-auto -mx-1 px-1 pb-1">
+        <div className="flex gap-1 flex-nowrap min-w-max">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
+                activeTab === t.key
+                  ? "bg-[#E51A1A] text-white"
+                  : "bg-[#1E1E1E] text-white/50 hover:text-white"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ── Tab Content ───────────────────────────────────── */}
+      {/* -- Tab Content ------------------------------------------- */}
       <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl overflow-hidden">
         {activeTab === "overview" && <OverviewTab user={user} />}
-        {activeTab === "meals" && <MealLogsTab logs={user.mealLogs} />}
+        {activeTab === "meals" && <MealLogsTab logs={mealLogs} onDelete={handleDeleteMeal} />}
         {activeTab === "weight" && <WeightTab logs={user.weightLogs} />}
         {activeTab === "steps" && <StepsTab logs={user.stepLogs} />}
         {activeTab === "measurements" && <MeasurementsTab data={user.bodyMeasurements} />}
@@ -451,7 +467,7 @@ export default function UserDetailClient({ user }: { user: UserData }) {
   );
 }
 
-/* ── Overview Tab ─────────────────────────────────────────── */
+/* -- Overview Tab -------------------------------------------------- */
 function OverviewTab({ user }: { user: UserData }) {
   const totalMeals = user.mealLogs.length;
   const latestWeight = user.weightLogs.length > 0 ? user.weightLogs[0].weightKg : null;
@@ -467,13 +483,13 @@ function OverviewTab({ user }: { user: UserData }) {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 text-center">
-            <p className="text-xs text-white/40 uppercase tracking-wide">{card.label}</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: card.color }}>
+          <div key={card.label} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
+            <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">{card.label}</p>
+            <p className="text-xl sm:text-2xl font-bold mt-1" style={{ color: card.color }}>
               {card.value}
             </p>
           </div>
@@ -489,16 +505,16 @@ function OverviewTab({ user }: { user: UserData }) {
               {user.macroTarget.goal}
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {[
               { label: "Calories", value: `${user.macroTarget.calories} kcal`, color: "#E51A1A" },
               { label: "Protein", value: `${user.macroTarget.protein}g`, color: "#FF6B00" },
               { label: "Carbs", value: `${user.macroTarget.carbs}g`, color: "#FFB800" },
               { label: "Fat", value: `${user.macroTarget.fat}g`, color: "#A855F7" },
             ].map((item) => (
-              <div key={item.label} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 text-center">
-                <p className="text-xs text-white/40 uppercase tracking-wide">{item.label}</p>
-                <p className="text-xl font-bold mt-1" style={{ color: item.color }}>
+              <div key={item.label} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
+                <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">{item.label}</p>
+                <p className="text-lg sm:text-xl font-bold mt-1" style={{ color: item.color }}>
                   {item.value}
                 </p>
               </div>
@@ -510,9 +526,10 @@ function OverviewTab({ user }: { user: UserData }) {
   );
 }
 
-/* ── Meal Logs Tab ────────────────────────────────────────── */
-function MealLogsTab({ logs }: { logs: MealLog[] }) {
+/* -- Meal Logs Tab ------------------------------------------------- */
+function MealLogsTab({ logs, onDelete }: { logs: MealLog[]; onDelete: (id: number) => void }) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   if (!logs.length) return <EmptyState text="No meal logs recorded yet." />;
 
@@ -533,103 +550,218 @@ function MealLogsTab({ logs }: { logs: MealLog[] }) {
     }
   }
 
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
-            <th className="px-4 py-3 text-left font-medium">Date</th>
-            <th className="px-4 py-3 text-left font-medium">Meal</th>
-            <th className="px-4 py-3 text-left font-medium">Type</th>
-            <th className="px-4 py-3 text-right font-medium">Cals</th>
-            <th className="px-4 py-3 text-right font-medium">P</th>
-            <th className="px-4 py-3 text-right font-medium">C</th>
-            <th className="px-4 py-3 text-right font-medium">F</th>
-            <th className="px-4 py-3 text-center font-medium">Photo</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(grouped).map(([date, items]) => {
-            const totals = items.reduce(
-              (acc, m) => ({
-                calories: acc.calories + m.calories,
-                protein: acc.protein + m.protein,
-                carbs: acc.carbs + m.carbs,
-                fat: acc.fat + m.fat,
-              }),
-              { calories: 0, protein: 0, carbs: 0, fat: 0 }
-            );
+  async function handleDelete(id: number) {
+    setDeletingId(id);
+    await onDelete(id);
+    setDeletingId(null);
+  }
 
-            return (
-              <Fragment key={date}>
+  return (
+    <div className="p-4 sm:p-0">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-4">
+        {Object.entries(grouped).map(([date, items]) => {
+          const totals = items.reduce(
+            (acc, m) => ({
+              calories: acc.calories + m.calories,
+              protein: acc.protein + m.protein,
+              carbs: acc.carbs + m.carbs,
+              fat: acc.fat + m.fat,
+            }),
+            { calories: 0, protein: 0, carbs: 0, fat: 0 }
+          );
+
+          return (
+            <div key={date}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">{date}</p>
+                <p className="text-xs text-[#FF6B00] font-semibold">{totals.calories} kcal total</p>
+              </div>
+              <div className="space-y-2">
                 {items.map((m) => {
                   const ingredients = parseIngredients(m.ingredients);
                   const isExpanded = expandedId === m.id;
                   return (
-                    <Fragment key={m.id}>
-                      <tr
-                        className="border-b border-[#2A2A2A]/50 text-white/80 cursor-pointer hover:bg-[#141414]"
+                    <div
+                      key={m.id}
+                      className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3"
+                    >
+                      <div
+                        className="cursor-pointer"
                         onClick={() => setExpandedId(isExpanded ? null : m.id)}
                       >
-                        <td className="px-4 py-2.5">{date}</td>
-                        <td className="px-4 py-2.5 max-w-[200px] truncate">{m.description}</td>
-                        <td className="px-4 py-2.5">
-                          <span className="px-2 py-0.5 rounded-full text-xs bg-white/10">{m.mealType}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-right">{m.calories}</td>
-                        <td className="px-4 py-2.5 text-right">{m.protein.toFixed(0)}g</td>
-                        <td className="px-4 py-2.5 text-right">{m.carbs.toFixed(0)}g</td>
-                        <td className="px-4 py-2.5 text-right">{m.fat.toFixed(0)}g</td>
-                        <td className="px-4 py-2.5 text-center">
-                          {m.imageData ? (
-                            <img src={m.imageData} alt="meal" className="w-8 h-8 rounded object-cover inline-block" />
-                          ) : (
-                            <span className="text-white/20">--</span>
-                          )}
-                        </td>
-                      </tr>
-                      {isExpanded && ingredients.length > 0 && (
-                        <tr className="bg-[#0A0A0A]">
-                          <td colSpan={8} className="px-6 py-3">
-                            <p className="text-xs text-white/40 uppercase tracking-wide mb-2">Ingredients</p>
-                            <div className="space-y-1">
-                              {ingredients.map((ing, idx) => (
-                                <div key={idx} className="flex items-center gap-4 text-xs text-white/70">
-                                  <span className="flex-1">{ing.name}</span>
-                                  {ing.weightGrams && <span>{ing.weightGrams}g</span>}
-                                  {ing.calories !== undefined && <span>{ing.calories} kcal</span>}
-                                  {ing.protein !== undefined && <span>P:{ing.protein}g</span>}
-                                  {ing.carbs !== undefined && <span>C:{ing.carbs}g</span>}
-                                  {ing.fat !== undefined && <span>F:{ing.fat}g</span>}
-                                </div>
-                              ))}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-medium truncate">{m.description}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/10 text-white/60">{m.mealType}</span>
+                              {m.loggedTime && <span className="text-[10px] text-white/30">{m.loggedTime}</span>}
                             </div>
-                          </td>
-                        </tr>
+                          </div>
+                          {m.imageData && (
+                            <img src={m.imageData} alt="meal" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                          )}
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 mt-2">
+                          <div className="text-center">
+                            <p className="text-[10px] text-white/30">Cals</p>
+                            <p className="text-xs font-semibold text-[#E51A1A]">{m.calories}</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[10px] text-white/30">Protein</p>
+                            <p className="text-xs font-semibold text-[#FF6B00]">{m.protein.toFixed(0)}g</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[10px] text-white/30">Carbs</p>
+                            <p className="text-xs font-semibold text-[#FFB800]">{m.carbs.toFixed(0)}g</p>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[10px] text-white/30">Fat</p>
+                            <p className="text-xs font-semibold text-[#A855F7]">{m.fat.toFixed(0)}g</p>
+                          </div>
+                        </div>
+                      </div>
+                      {isExpanded && ingredients.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-[#2A2A2A]">
+                          <p className="text-[10px] text-white/40 uppercase tracking-wide mb-2">Ingredients</p>
+                          <div className="space-y-1">
+                            {ingredients.map((ing, idx) => (
+                              <div key={idx} className="flex items-center justify-between text-xs text-white/60">
+                                <span>{ing.name}</span>
+                                <span className="text-white/30 shrink-0 ml-2">
+                                  {ing.calories !== undefined && `${ing.calories} kcal`}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </Fragment>
+                      <div className="mt-2 pt-2 border-t border-[#2A2A2A] flex justify-end">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
+                          disabled={deletingId === m.id}
+                          className="text-[10px] text-red-400/60 hover:text-red-400 bg-transparent border-none cursor-pointer disabled:opacity-40"
+                        >
+                          {deletingId === m.id ? "Deleting..." : "Delete"}
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
-                <tr className="border-b border-[#2A2A2A] bg-[#141414] text-[#FF6B00] font-semibold text-xs">
-                  <td className="px-4 py-2" colSpan={3}>
-                    Daily Total
-                  </td>
-                  <td className="px-4 py-2 text-right">{totals.calories}</td>
-                  <td className="px-4 py-2 text-right">{totals.protein.toFixed(0)}g</td>
-                  <td className="px-4 py-2 text-right">{totals.carbs.toFixed(0)}g</td>
-                  <td className="px-4 py-2 text-right">{totals.fat.toFixed(0)}g</td>
-                  <td className="px-4 py-2" />
-                </tr>
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
+              <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-left font-medium">Meal</th>
+              <th className="px-4 py-3 text-left font-medium">Type</th>
+              <th className="px-4 py-3 text-right font-medium">Cals</th>
+              <th className="px-4 py-3 text-right font-medium">P</th>
+              <th className="px-4 py-3 text-right font-medium">C</th>
+              <th className="px-4 py-3 text-right font-medium">F</th>
+              <th className="px-4 py-3 text-center font-medium">Photo</th>
+              <th className="px-4 py-3 text-center font-medium w-16"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(grouped).map(([date, items]) => {
+              const totals = items.reduce(
+                (acc, m) => ({
+                  calories: acc.calories + m.calories,
+                  protein: acc.protein + m.protein,
+                  carbs: acc.carbs + m.carbs,
+                  fat: acc.fat + m.fat,
+                }),
+                { calories: 0, protein: 0, carbs: 0, fat: 0 }
+              );
+
+              return (
+                <Fragment key={date}>
+                  {items.map((m) => {
+                    const ingredients = parseIngredients(m.ingredients);
+                    const isExpanded = expandedId === m.id;
+                    return (
+                      <Fragment key={m.id}>
+                        <tr
+                          className="border-b border-[#2A2A2A]/50 text-white/80 cursor-pointer hover:bg-[#141414]"
+                          onClick={() => setExpandedId(isExpanded ? null : m.id)}
+                        >
+                          <td className="px-4 py-2.5">{date}</td>
+                          <td className="px-4 py-2.5 max-w-[200px] truncate">{m.description}</td>
+                          <td className="px-4 py-2.5">
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-white/10">{m.mealType}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right">{m.calories}</td>
+                          <td className="px-4 py-2.5 text-right">{m.protein.toFixed(0)}g</td>
+                          <td className="px-4 py-2.5 text-right">{m.carbs.toFixed(0)}g</td>
+                          <td className="px-4 py-2.5 text-right">{m.fat.toFixed(0)}g</td>
+                          <td className="px-4 py-2.5 text-center">
+                            {m.imageData ? (
+                              <img src={m.imageData} alt="meal" className="w-8 h-8 rounded object-cover inline-block" />
+                            ) : (
+                              <span className="text-white/20">--</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-center">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
+                              disabled={deletingId === m.id}
+                              className="text-[10px] text-red-400/50 hover:text-red-400 bg-transparent border-none cursor-pointer disabled:opacity-40"
+                            >
+                              {deletingId === m.id ? "..." : "Delete"}
+                            </button>
+                          </td>
+                        </tr>
+                        {isExpanded && ingredients.length > 0 && (
+                          <tr className="bg-[#0A0A0A]">
+                            <td colSpan={9} className="px-6 py-3">
+                              <p className="text-xs text-white/40 uppercase tracking-wide mb-2">Ingredients</p>
+                              <div className="space-y-1">
+                                {ingredients.map((ing, idx) => (
+                                  <div key={idx} className="flex items-center gap-4 text-xs text-white/70">
+                                    <span className="flex-1">{ing.name}</span>
+                                    {ing.weightGrams && <span>{ing.weightGrams}g</span>}
+                                    {ing.calories !== undefined && <span>{ing.calories} kcal</span>}
+                                    {ing.protein !== undefined && <span>P:{ing.protein}g</span>}
+                                    {ing.carbs !== undefined && <span>C:{ing.carbs}g</span>}
+                                    {ing.fat !== undefined && <span>F:{ing.fat}g</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    );
+                  })}
+                  <tr className="border-b border-[#2A2A2A] bg-[#141414] text-[#FF6B00] font-semibold text-xs">
+                    <td className="px-4 py-2" colSpan={3}>
+                      Daily Total
+                    </td>
+                    <td className="px-4 py-2 text-right">{totals.calories}</td>
+                    <td className="px-4 py-2 text-right">{totals.protein.toFixed(0)}g</td>
+                    <td className="px-4 py-2 text-right">{totals.carbs.toFixed(0)}g</td>
+                    <td className="px-4 py-2 text-right">{totals.fat.toFixed(0)}g</td>
+                    <td className="px-4 py-2" colSpan={2} />
+                  </tr>
+                </Fragment>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-/* ── Weight Tab ───────────────────────────────────────────── */
+/* -- Weight Tab ---------------------------------------------------- */
 function WeightTab({ logs }: { logs: WeightLog[] }) {
   const [range, setRange] = useState("30d");
 
@@ -660,13 +792,15 @@ function WeightTab({ logs }: { logs: WeightLog[] }) {
 
   const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
+  const reverseSorted = [...sorted].reverse();
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="mb-2">
         <TimeRangeFilter value={range} onChange={setRange} options={ADMIN_RANGE_OPTIONS} />
       </div>
-      <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full max-w-[700px]">
+      <div className="w-full overflow-hidden">
+        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full">
           {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
             const y = padY + plotH - pct * plotH;
             const val = (minW + pct * weightRange).toFixed(1);
@@ -686,7 +820,31 @@ function WeightTab({ logs }: { logs: WeightLog[] }) {
         </svg>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-2">
+        {reverseSorted.map((w, i) => {
+          const next = i < reverseSorted.length - 1 ? reverseSorted[i + 1].weightKg : null;
+          const change = next !== null ? w.weightKg - next : null;
+          return (
+            <div key={w.id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-white font-medium">{w.weightKg.toFixed(1)} kg</p>
+                <p className="text-xs text-white/40 mt-0.5">{new Date(w.loggedDate).toLocaleDateString()}</p>
+              </div>
+              {change !== null ? (
+                <span className={`text-sm font-semibold ${change > 0 ? "text-red-400" : change < 0 ? "text-green-400" : "text-white/40"}`}>
+                  {change > 0 ? "+" : ""}{change.toFixed(1)} kg
+                </span>
+              ) : (
+                <span className="text-sm text-white/20">--</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
@@ -696,8 +854,8 @@ function WeightTab({ logs }: { logs: WeightLog[] }) {
             </tr>
           </thead>
           <tbody>
-            {[...sorted].reverse().map((w, i, arr) => {
-              const next = i < arr.length - 1 ? arr[i + 1].weightKg : null;
+            {reverseSorted.map((w, i) => {
+              const next = i < reverseSorted.length - 1 ? reverseSorted[i + 1].weightKg : null;
               const change = next !== null ? w.weightKg - next : null;
               return (
                 <tr key={w.id} className="border-b border-[#2A2A2A]/50 text-white/80">
@@ -723,7 +881,7 @@ function WeightTab({ logs }: { logs: WeightLog[] }) {
   );
 }
 
-/* ── Steps Tab ───────────────────────────────────────────── */
+/* -- Steps Tab ----------------------------------------------------- */
 function StepsTab({ logs }: { logs: StepLog[] }) {
   const [range, setRange] = useState("30d");
 
@@ -749,30 +907,30 @@ function StepsTab({ logs }: { logs: StepLog[] }) {
   const barW = Math.max(4, plotW / sorted.length - 2);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="mb-2">
         <TimeRangeFilter value={range} onChange={setRange} options={ADMIN_RANGE_OPTIONS} />
       </div>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 text-center">
-          <p className="text-xs text-white/40 uppercase tracking-wide">Average</p>
-          <p className="text-xl font-bold text-[#FF6B00] mt-1">{avg.toLocaleString()}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">Average</p>
+          <p className="text-lg sm:text-xl font-bold text-[#FF6B00] mt-1">{avg.toLocaleString()}</p>
         </div>
-        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 text-center">
-          <p className="text-xs text-white/40 uppercase tracking-wide">Best Day</p>
-          <p className="text-xl font-bold text-[#FFB800] mt-1">{best.steps.toLocaleString()}</p>
-          <p className="text-xs text-white/30">{new Date(best.loggedDate).toLocaleDateString()}</p>
+        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">Best Day</p>
+          <p className="text-lg sm:text-xl font-bold text-[#FFB800] mt-1">{best.steps.toLocaleString()}</p>
+          <p className="text-[10px] text-white/30">{new Date(best.loggedDate).toLocaleDateString()}</p>
         </div>
-        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-4 text-center">
-          <p className="text-xs text-white/40 uppercase tracking-wide">Goal Met</p>
-          <p className="text-xl font-bold text-green-400 mt-1">{goalMetCount} / {sorted.length}</p>
+        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
+          <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">Goal Met</p>
+          <p className="text-lg sm:text-xl font-bold text-green-400 mt-1">{goalMetCount}/{sorted.length}</p>
         </div>
       </div>
 
       {/* SVG Bar Chart */}
-      <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full max-w-[700px]">
+      <div className="w-full overflow-hidden">
+        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full">
           {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
             const y = padY + plotH - pct * plotH;
             const val = Math.round(pct * maxSteps);
@@ -798,18 +956,70 @@ function StepsTab({ logs }: { logs: StepLog[] }) {
                 width={barW}
                 height={h}
                 rx={2}
-                fill={metGoal ? "#FF6B00" : "#FF6B00"}
+                fill="#FF6B00"
                 opacity={metGoal ? 1 : 0.4}
               />
             );
           })}
         </svg>
       </div>
+
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-2">
+        {[...sorted].reverse().map((s) => {
+          const metGoal = s.steps >= s.goal;
+          return (
+            <div key={s.id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm text-white font-medium">{s.steps.toLocaleString()} steps</p>
+                <p className="text-xs text-white/40 mt-0.5">{new Date(s.loggedDate).toLocaleDateString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-white/40">Goal: {s.goal.toLocaleString()}</p>
+                <span className={`text-[10px] font-semibold ${metGoal ? "text-green-400" : "text-red-400"}`}>
+                  {metGoal ? "Met" : "Missed"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
+              <th className="px-4 py-3 text-left font-medium">Date</th>
+              <th className="px-4 py-3 text-right font-medium">Steps</th>
+              <th className="px-4 py-3 text-right font-medium">Goal</th>
+              <th className="px-4 py-3 text-center font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...sorted].reverse().map((s) => {
+              const metGoal = s.steps >= s.goal;
+              return (
+                <tr key={s.id} className="border-b border-[#2A2A2A]/50 text-white/80">
+                  <td className="px-4 py-2.5">{new Date(s.loggedDate).toLocaleDateString()}</td>
+                  <td className="px-4 py-2.5 text-right font-medium">{s.steps.toLocaleString()}</td>
+                  <td className="px-4 py-2.5 text-right text-white/50">{s.goal.toLocaleString()}</td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className={`text-xs font-semibold ${metGoal ? "text-green-400" : "text-red-400"}`}>
+                      {metGoal ? "Met" : "Missed"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-/* ── Measurements Tab ────────────────────────────────────── */
+/* -- Measurements Tab ---------------------------------------------- */
 function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
   const [range, setRange] = useState("30d");
 
@@ -820,7 +1030,6 @@ function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
     (a, b) => new Date(a.loggedDate).getTime() - new Date(b.loggedDate).getTime()
   );
 
-  // Charts for weight and belly over time
   const weightPoints = sorted.filter((d) => d.weightKg != null).map((d) => ({ date: d.loggedDate, val: d.weightKg! }));
   const bellyPoints = sorted.filter((d) => d.bellyInches != null).map((d) => ({ date: d.loggedDate, val: d.bellyInches! }));
 
@@ -840,9 +1049,9 @@ function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
     const path = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
     return (
-      <div>
+      <div className="w-full overflow-hidden">
         <p className="text-xs text-white/40 uppercase tracking-wide mb-2">{label}</p>
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full max-w-[350px]">
+        <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
           {[0, 0.5, 1].map((pct) => {
             const y = py + ph - pct * ph;
             return (
@@ -863,8 +1072,10 @@ function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
     );
   }
 
+  const reverseSorted = [...sorted].reverse();
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <div className="mb-2">
         <TimeRangeFilter value={range} onChange={setRange} options={ADMIN_RANGE_OPTIONS} />
       </div>
@@ -874,8 +1085,43 @@ function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
         <MiniLineChart points={bellyPoints} color="#FF6B00" label="Belly Over Time (inches)" />
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
+      {/* Mobile cards */}
+      <div className="sm:hidden space-y-2">
+        {reverseSorted.map((m) => (
+          <div key={m.id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3">
+            <p className="text-xs text-white/50 mb-2">{new Date(m.loggedDate).toLocaleDateString()}</p>
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <p className="text-[10px] text-white/30">Weight</p>
+                <p className="text-xs font-semibold text-white">{m.weightKg?.toFixed(1) ?? "--"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30">Belly</p>
+                <p className="text-xs font-semibold text-white">{m.bellyInches?.toFixed(1) ?? "--"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30">Waist</p>
+                <p className="text-xs font-semibold text-white">{m.waistInches?.toFixed(1) ?? "--"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30">Chest</p>
+                <p className="text-xs font-semibold text-white">{m.chestInches?.toFixed(1) ?? "--"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30">Hips</p>
+                <p className="text-xs font-semibold text-white">{m.hipsInches?.toFixed(1) ?? "--"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/30">Arms</p>
+                <p className="text-xs font-semibold text-white">{m.armsInches?.toFixed(1) ?? "--"}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
@@ -889,7 +1135,7 @@ function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
             </tr>
           </thead>
           <tbody>
-            {[...sorted].reverse().map((m) => (
+            {reverseSorted.map((m) => (
               <tr key={m.id} className="border-b border-[#2A2A2A]/50 text-white/80">
                 <td className="px-4 py-2.5">{new Date(m.loggedDate).toLocaleDateString()}</td>
                 <td className="px-4 py-2.5 text-right">{m.weightKg?.toFixed(1) ?? "--"}</td>
@@ -907,15 +1153,15 @@ function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
   );
 }
 
-/* ── Photos Tab ───────────────────────────────────────────── */
+/* -- Photos Tab ---------------------------------------------------- */
 function PhotosTab({ photos }: { photos: ProgressPhoto[] }) {
   const [modal, setModal] = useState<string | null>(null);
 
   if (!photos.length) return <EmptyState text="No progress photos uploaded yet." />;
 
   return (
-    <div className="p-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div className="p-4 sm:p-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {photos.map((p) => (
           <div key={p.id} className="space-y-2">
             <div
@@ -929,7 +1175,7 @@ function PhotosTab({ photos }: { photos: ProgressPhoto[] }) {
               />
             </div>
             <p className="text-xs text-white/50">{new Date(p.photoDate).toLocaleDateString()}</p>
-            {p.notes && <p className="text-xs text-white/30">{p.notes}</p>}
+            {p.notes && <p className="text-xs text-white/30 line-clamp-2">{p.notes}</p>}
           </div>
         ))}
       </div>
@@ -946,12 +1192,12 @@ function PhotosTab({ photos }: { photos: ProgressPhoto[] }) {
   );
 }
 
-/* ── Favourites Tab ───────────────────────────────────────── */
+/* -- Favourites Tab ------------------------------------------------ */
 function FavouritesTab({ items }: { items: FavouriteItem[] }) {
   if (!items.length) return <EmptyState text="No favourite recipes yet." />;
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {items.map((f) => (
           <Link
@@ -959,13 +1205,13 @@ function FavouritesTab({ items }: { items: FavouriteItem[] }) {
             href={`/hub/recipes/${f.recipe.slug}`}
             className="flex items-center justify-between bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 hover:border-[#E51A1A]/40 transition-colors"
           >
-            <div>
-              <p className="text-sm font-medium text-white">{f.recipe.title}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-white truncate">{f.recipe.title}</p>
               <p className="text-xs text-white/40 mt-0.5">
                 {f.recipe.calories} kcal | {f.recipe.protein}g protein
               </p>
             </div>
-            <svg className="w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-white/30 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
@@ -975,10 +1221,10 @@ function FavouritesTab({ items }: { items: FavouriteItem[] }) {
   );
 }
 
-/* ── Messages Tab ─────────────────────────────────────────── */
+/* -- Messages Tab -------------------------------------------------- */
 function MessagesTab({ messages, userId }: { messages: MessageItem[]; userId: string }) {
   return (
-    <div className="p-6 space-y-4">
+    <div className="p-4 sm:p-6 space-y-4">
       {messages.length === 0 ? (
         <EmptyState text="No messages yet." />
       ) : (
@@ -990,15 +1236,15 @@ function MessagesTab({ messages, userId }: { messages: MessageItem[]; userId: st
                 m.isSentByUser ? "bg-[#141414]" : "bg-[#1A1A2E]"
               }`}
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
                 <span className="text-xs font-semibold text-white/60">
                   {m.isSentByUser ? `From: ${m.senderName}` : `From: ${m.senderName} (Admin)`}
                 </span>
-                <span className="text-xs text-white/30">
+                <span className="text-[10px] sm:text-xs text-white/30">
                   {new Date(m.createdAt).toLocaleString()}
                 </span>
               </div>
-              <p className="text-sm text-white/80">{m.content}</p>
+              <p className="text-sm text-white/80 break-words">{m.content}</p>
               {!m.isRead && (
                 <span className="inline-block mt-1 text-xs text-[#FFB800]">Unread</span>
               )}
@@ -1020,7 +1266,7 @@ function MessagesTab({ messages, userId }: { messages: MessageItem[]; userId: st
   );
 }
 
-/* ── Empty State ──────────────────────────────────────────── */
+/* -- Empty State --------------------------------------------------- */
 function EmptyState({ text }: { text: string }) {
   return (
     <div className="flex items-center justify-center py-16">
