@@ -2,22 +2,42 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const sidebarLinks = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/recipes", label: "Recipes" },
-  { href: "/admin/workouts", label: "Workouts" },
-  { href: "/admin/testimonials", label: "Testimonials" },
-  { href: "/admin/restaurants", label: "Restaurants" },
-  { href: "/admin/food-database", label: "Food Database" },
-  { href: "/admin/users", label: "Users" },
-  { href: "/admin/signup-requests", label: "Signup Requests" },
-  { href: "/admin/feed", label: "Feed" },
-  { href: "/admin/content", label: "Site Content" },
-  { href: "/admin/assets", label: "Assets" },
-  { href: "/admin/messages", label: "Messages" },
-  { href: "/admin/notifications", label: "Notifications" },
+const sidebarGroups = [
+  {
+    label: "OVERVIEW",
+    links: [
+      { href: "/admin", label: "Dashboard" },
+    ],
+  },
+  {
+    label: "CONTENT",
+    links: [
+      { href: "/admin/recipes", label: "Recipes" },
+      { href: "/admin/workouts", label: "Workouts" },
+      { href: "/admin/testimonials", label: "Testimonials" },
+      { href: "/admin/restaurants", label: "Restaurants" },
+      { href: "/admin/food-database", label: "Food Database" },
+      { href: "/admin/feed", label: "Feed" },
+    ],
+  },
+  {
+    label: "USERS",
+    links: [
+      { href: "/admin/users", label: "Users" },
+      { href: "/admin/signup-requests", label: "Signup Requests" },
+      { href: "/admin/messages", label: "Messages" },
+      { href: "/admin/notifications", label: "Notifications" },
+    ],
+  },
+  {
+    label: "SETTINGS",
+    links: [
+      { href: "/admin/content", label: "Site Content" },
+      { href: "/admin/assets", label: "Assets" },
+    ],
+  },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -25,86 +45,170 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebarOpen]);
+
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
   }
 
-  return (
-    <div className="flex min-h-screen">
-      {/* Mobile sidebar toggle */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="lg:hidden fixed bottom-6 right-6 z-50 w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center text-2xl border-none cursor-pointer"
-        aria-label="Toggle sidebar"
-      >
-        {sidebarOpen ? "\u2715" : "\u2630"}
-      </button>
+  function isActive(href: string) {
+    if (href === "/admin") return pathname === "/admin";
+    return pathname === href || pathname.startsWith(href + "/");
+  }
 
-      {/* Sidebar */}
-      <aside
-        className={`fixed lg:sticky top-0 left-0 h-screen w-[260px] bg-dark flex flex-col z-40 transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
-        {/* Admin branding */}
-        <div className="p-6 border-b border-white/10">
-          <p className="font-black text-lg tracking-widest text-white">LEVEL UP</p>
-          <p className="text-xs text-white/50 mt-0.5">Admin Panel</p>
-        </div>
+  function linkCls(href: string) {
+    return isActive(href)
+      ? "text-white font-semibold bg-[#E51A1A]/[0.08] border-l-[3px] border-[#E51A1A]"
+      : "text-white/50 hover:text-white/80 hover:bg-white/[0.03] border-l-[3px] border-transparent";
+  }
 
-        {/* Nav links */}
-        <nav className="flex-1 py-4 overflow-y-auto">
-          {sidebarLinks.map((link) => {
-            const isActive =
-              link.href === "/admin"
-                ? pathname === "/admin"
-                : pathname === link.href || pathname.startsWith(link.href + "/");
-            return (
+  function NavGroups({ mobile }: { mobile?: boolean }) {
+    return (
+      <>
+        {sidebarGroups.map((group) => (
+          <div key={group.label}>
+            <p className="text-[10px] font-bold text-white/25 uppercase tracking-[2px] px-5 pt-5 pb-2">
+              {group.label}
+            </p>
+            {group.links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary/10 text-primary border-r-3 border-primary"
-                    : "text-white/60 hover:text-white/80 hover:bg-[#1E1E1E]/5"
-                }`}
+                onClick={mobile ? () => setSidebarOpen(false) : undefined}
+                className={`flex items-center px-5 ${
+                  mobile ? "py-3 text-[15px]" : "py-2 text-[13px]"
+                } font-medium transition-all duration-200 ${linkCls(link.href)}`}
               >
                 {link.label}
               </Link>
-            );
-          })}
+            ))}
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div className="flex min-h-screen">
+      {/* ── Desktop Sidebar ── */}
+      <aside className="hidden lg:flex flex-col w-[260px] bg-[#0A0A0A] border-r border-[#1A1A1A] sticky top-0 h-screen">
+        {/* Branding */}
+        <div className="p-5 border-b border-[#1A1A1A]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              CR
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">Coach Raheel</p>
+              <p className="text-[10px] text-white/30">Admin Panel</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Grouped nav */}
+        <nav className="flex-1 overflow-y-auto py-1">
+          <NavGroups />
         </nav>
 
-        {/* Bottom actions */}
-        <div className="p-4 border-t border-white/10 space-y-1">
+        {/* Bottom */}
+        <div className="px-5 py-3 border-t border-[#1A1A1A] space-y-1">
           <Link
             href="/"
-            className="flex items-center px-4 py-2.5 text-sm font-medium text-white/60 hover:text-white hover:bg-[#1E1E1E]/5 rounded-lg transition-colors"
+            className="block text-[12px] text-white/30 hover:text-white/50 transition-colors py-1"
           >
             &larr; Back to Site
           </Link>
           <button
             onClick={handleLogout}
-            className="w-full flex items-center px-4 py-2.5 text-sm font-medium text-white/60 hover:text-red-400 hover:bg-[#1E1E1E]/5 rounded-lg transition-colors cursor-pointer bg-transparent border-none"
+            className="text-[11px] text-white/25 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
           >
-            Log Out
+            Log out
           </button>
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* ── Mobile Top Bar ── */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-[#0A0A0A] border-b border-[#1A1A1A] z-30 flex items-center justify-between px-4">
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="text-white/70 hover:text-white bg-transparent border-none cursor-pointer p-1"
+          aria-label="Open menu"
+        >
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span className="text-white font-bold text-sm tracking-wider uppercase">Admin</span>
+        <div className="w-6" />
+      </div>
+
+      {/* ── Mobile Backdrop (blur + dim) ── */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Main content */}
-      <main className="flex-1 bg-light min-h-screen">
-        <div className="p-6 lg:p-8">{children}</div>
+      {/* ── Mobile Sidebar (full screen) ── */}
+      <aside
+        className={`fixed inset-0 z-50 bg-[#0A0A0A] flex flex-col lg:hidden transition-transform duration-300 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Mobile header */}
+        <div className="flex items-center justify-between p-5 border-b border-[#1A1A1A]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+              CR
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">Coach Raheel</p>
+              <p className="text-[10px] text-white/30">Admin Panel</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="text-white/40 hover:text-white text-2xl bg-transparent border-none cursor-pointer p-1 leading-none"
+            aria-label="Close menu"
+          >
+            &times;
+          </button>
+        </div>
+
+        {/* Mobile nav */}
+        <nav className="flex-1 overflow-y-auto py-1">
+          <NavGroups mobile />
+        </nav>
+
+        {/* Mobile bottom */}
+        <div
+          className="px-5 py-3 border-t border-[#1A1A1A] space-y-1"
+          style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
+        >
+          <Link
+            href="/"
+            onClick={() => setSidebarOpen(false)}
+            className="block text-[12px] text-white/30 hover:text-white/50 transition-colors py-1"
+          >
+            &larr; Back to Site
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-[11px] text-white/25 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
+          >
+            Log out
+          </button>
+        </div>
+      </aside>
+
+      {/* ── Main Content ── */}
+      <main className="flex-1 bg-[#111111] min-h-screen">
+        <div className="p-6 lg:p-8 pt-20 lg:pt-8">{children}</div>
       </main>
     </div>
   );
