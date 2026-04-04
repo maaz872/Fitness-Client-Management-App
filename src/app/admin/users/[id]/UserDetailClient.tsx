@@ -1,1276 +1,1054 @@
 "use client";
 
-import { useState, Fragment } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import TimeRangeFilter from "@/components/ui/TimeRangeFilter";
 
-const ADMIN_RANGE_OPTIONS = [
-  { label: "Month", value: "30d" },
-  { label: "3 Months", value: "90d" },
-  { label: "Year", value: "1y" },
-  { label: "All Time", value: "all" },
-];
+/* ─── Types ──────────────────────────────────────────────────────────── */
 
-function adminRangeToDays(range: string): number {
-  switch (range) {
-    case "30d": return 30;
-    case "90d": return 90;
-    case "1y": return 365;
-    default: return 0;
-  }
-}
-
-function filterByRange<T extends { loggedDate: string }>(data: T[], range: string): T[] {
-  const days = adminRangeToDays(range);
-  if (days === 0) return data;
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().slice(0, 10);
-  return data.filter((d) => d.loggedDate.slice(0, 10) >= cutoffStr);
-}
-
-/* -- Types -------------------------------------------------------- */
-interface MacroTarget {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  goal: string;
-}
-interface MealLog {
-  id: number;
-  description: string;
-  mealType: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  loggedDate: string;
-  loggedTime: string;
-  imageData: string | null;
-  ingredients: string | null;
-}
-interface WeightLog {
-  id: number;
-  weightKg: number;
-  loggedDate: string;
-}
-interface ProgressPhoto {
-  id: number;
-  imageData: string;
-  photoDate: string;
-  notes: string;
-}
-interface FavouriteItem {
-  id: number;
-  recipe: { id: number; title: string; slug: string; calories: number; protein: number };
-}
-interface MessageItem {
-  id: number;
-  content: string;
-  isRead: boolean;
-  createdAt: string;
-  senderName: string;
-  receiverName: string;
-  isSentByUser: boolean;
-}
-interface StepLog {
-  id: number;
-  steps: number;
-  goal: number;
-  loggedDate: string;
-}
-interface BodyMeasurement {
-  id: number;
-  loggedDate: string;
-  weightKg: number | null;
-  bellyInches: number | null;
-  chestInches: number | null;
-  waistInches: number | null;
-  hipsInches: number | null;
-  armsInches: number | null;
-}
-
-interface UserData {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  country: string;
-  role: string;
-  plan: string;
-  planStatus: string;
-  isActive: boolean;
-  createdAt: string;
-  lastLoginAt: string | null;
-  paymentScreenshot: string | null;
-  paymentAccountName: string | null;
-  paymentTransactionRef: string | null;
-  age: number | null;
-  gender: string | null;
-  heightCm: number | null;
-  currentWeightKg: number | null;
-  bodyFatPercent: number | null;
-  fitnessGoal: string | null;
-  activityLevel: string | null;
-  dietaryPrefs: string | null;
-  healthConditions: string | null;
-  targetWeightKg: number | null;
-  macroTarget: MacroTarget | null;
-  mealLogs: MealLog[];
-  weightLogs: WeightLog[];
-  progressPhotos: ProgressPhoto[];
-  favourites: FavouriteItem[];
-  messages: MessageItem[];
-  stepLogs: StepLog[];
-  bodyMeasurements: BodyMeasurement[];
-  notifications: { id: number; title: string; message: string; type: string; isRead: boolean; createdAt: string }[];
-}
-
-type Tab = "overview" | "meals" | "weight" | "steps" | "measurements" | "photos" | "favourites" | "messages";
-
-const PLAN_COLORS: Record<string, string> = {
-  FREE: "bg-white/10 text-white/70",
-  HUB: "bg-[#FF6B00]/20 text-[#FF6B00]",
+type MealLog = {
+  id: number; description: string; mealType: string;
+  calories: number; protein: number; carbs: number; fat: number;
+  imageData: string | null; ingredients: string | null;
+  loggedDate: string; loggedTime: string;
+};
+type WeightLog = { id: number; weightKg: number; loggedDate: string };
+type StepLog = { id: number; steps: number; goal: number; loggedDate: string };
+type BodyMeasurement = {
+  id: number; loggedDate: string; weightKg: number | null;
+  bellyInches: number | null; waistInches: number | null;
+  chestInches: number | null; hipsInches: number | null;
+  armsInches: number | null; imageData: string | null; notes: string | null;
+};
+type ProgressPhoto = { id: number; imageData: string; photoDate: string; notes: string };
+type Favourite = { id: number; recipe: { id: number; title: string; slug: string; calories: number } };
+type Message = {
+  id: number; content: string; imageData: string | null;
+  isRead: boolean; createdAt: string;
+  senderName: string; senderRole: string; isSentByUser: boolean;
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: "bg-[#FFB800]/20 text-[#FFB800]",
-  ACTIVE: "bg-green-500/20 text-green-400",
-  EXPIRED: "bg-white/10 text-white/50",
-  CANCELLED: "bg-red-500/20 text-red-400",
+type UserData = {
+  id: string; firstName: string; lastName: string; email: string; country: string;
+  role: string; plan: string; planStatus: string; isActive: boolean;
+  age: number | null; gender: string | null; heightCm: number | null;
+  currentWeightKg: number | null; bodyFatPercent: number | null;
+  fitnessGoal: string | null; activityLevel: string | null;
+  dietaryPrefs: string | null; targetWeightKg: number | null;
+  createdAt: string; lastLoginAt: string | null;
+  paymentScreenshot: string | null; paymentAccountName: string | null;
+  avgDailyCals: number; avgDailySteps: number; weightChange: number | null;
+  hoursSinceLastLog: number | null; unreadMessages: number;
+  macroTarget: { calories: number; protein: number; carbs: number; fat: number; goal: string } | null;
+  mealLogs: MealLog[]; weightLogs: WeightLog[]; stepLogs: StepLog[];
+  bodyMeasurements: BodyMeasurement[]; progressPhotos: ProgressPhoto[];
+  favourites: Favourite[]; messages: Message[];
 };
 
-function formatLabel(s: string | null | undefined): string {
-  if (!s) return "N/A";
-  return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+/* ─── Helpers ────────────────────────────────────────────────────────── */
+
+const TABS = ["Overview", "Meals", "Weight", "Steps", "Body", "Photos", "Messages"] as const;
+type Tab = typeof TABS[number];
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+function fmtDateShort(iso: string) {
+  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
-function parseJsonArray(s: string | null): string[] {
-  if (!s) return [];
-  try {
-    const parsed = JSON.parse(s);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+function filterByRange<T extends { loggedDate?: string; photoDate?: string }>(items: T[], range: string): T[] {
+  if (range === "all") return items;
+  const days = range === "7d" ? 7 : range === "30d" ? 30 : range === "90d" ? 90 : 365;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  return items.filter(i => {
+    const d = i.loggedDate || i.photoDate || "";
+    return new Date(d) >= cutoff;
+  });
 }
+
+function MiniRing({ pct, color, size = 40 }: { pct: number; color: string; size?: number }) {
+  const r = (size - 6) / 2;
+  const c = Math.PI * 2 * r;
+  const p = Math.min(Math.max(pct, 0), 100);
+  return (
+    <svg width={size} height={size} className="shrink-0">
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#2A2A2A" strokeWidth={3} />
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={3}
+        strokeDasharray={c} strokeDashoffset={c - (c * p / 100)}
+        strokeLinecap="round" transform={`rotate(-90 ${size / 2} ${size / 2})`} />
+    </svg>
+  );
+}
+
+const mealTypeColor: Record<string, string> = {
+  Breakfast: "#FFB800", Lunch: "#4CAF50", Dinner: "#E51A1A", Snack: "#FF6B00",
+};
+
+/* ─── Main Component ─────────────────────────────────────────────────── */
 
 export default function UserDetailClient({ user }: { user: UserData }) {
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [showNotifForm, setShowNotifForm] = useState(false);
+  const router = useRouter();
+  const [tab, setTab] = useState<Tab>("Overview");
+  const [sending, setSending] = useState(false);
+
+  /* ── Notification form ── */
   const [notifTitle, setNotifTitle] = useState("");
-  const [notifMessage, setNotifMessage] = useState("");
-  const [notifType, setNotifType] = useState("admin_alert");
-  const [notifSending, setNotifSending] = useState(false);
-  const [notifSuccess, setNotifSuccess] = useState("");
-  const [photoModal, setPhotoModal] = useState<string | null>(null);
-  const [mealLogs, setMealLogs] = useState<MealLog[]>(user.mealLogs);
+  const [notifMsg, setNotifMsg] = useState("");
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "meals", label: "Meals" },
-    { key: "weight", label: "Weight" },
-    { key: "steps", label: "Steps" },
-    { key: "measurements", label: "Measurements" },
-    { key: "photos", label: "Photos" },
-    { key: "favourites", label: "Favourites" },
-    { key: "messages", label: "Messages" },
-  ];
-
-  const initials = `${user.firstName?.charAt(0) || ""}${user.lastName?.charAt(0) || ""}`.toUpperCase();
-
-  async function handleSendNotification() {
-    if (!notifTitle.trim() || !notifMessage.trim()) return;
-    setNotifSending(true);
-    setNotifSuccess("");
+  const sendNotification = async () => {
+    if (!notifTitle.trim() || !notifMsg.trim()) return;
+    setSending(true);
     try {
-      const res = await fetch("/api/admin/notifications", {
+      await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, title: notifTitle, message: notifMsg }),
+      });
+      setNotifTitle(""); setNotifMsg("");
+      alert("Notification sent!");
+    } catch { alert("Failed to send"); }
+    setSending(false);
+  };
+
+  /* ── Message form ── */
+  const [msgText, setMsgText] = useState("");
+  const sendMessage = async () => {
+    if (!msgText.trim()) return;
+    setSending(true);
+    try {
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: user.id, content: msgText }),
+      });
+      setMsgText("");
+      router.refresh();
+    } catch { alert("Failed to send message"); }
+    setSending(false);
+  };
+
+  /* ── Delete helpers ── */
+  const deleteMeal = async (id: number) => {
+    if (!confirm("Delete this meal log?")) return;
+    await fetch(`/api/admin/meals/${id}`, { method: "DELETE" });
+    router.refresh();
+  };
+  const deleteEntry = async (type: string, id: number) => {
+    if (!confirm(`Delete this ${type} entry?`)) return;
+    await fetch(`/api/admin/user-data?type=${type}&id=${id}`, { method: "DELETE" });
+    router.refresh();
+  };
+
+  /* ── Photo modal ── */
+  const [photoModal, setPhotoModal] = useState<string | null>(null);
+
+  return (
+    <div className="min-h-screen bg-[#0A0A0A] text-white pb-24">
+      {/* ── Profile Header ── */}
+      <ProfileHeader user={user} />
+
+      {/* ── Sticky Tab Bar ── */}
+      <div className="sticky top-0 z-20 bg-[#111111] border-b border-[#2A2A2A]">
+        <div className="overflow-x-auto whitespace-nowrap scrollbar-none">
+          <div className="flex">
+            {TABS.map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                className={`min-h-[44px] px-4 py-3 text-sm font-medium transition-colors shrink-0 cursor-pointer ${
+                  tab === t ? "border-b-2 border-[#E51A1A] text-white font-semibold" : "text-white/40 hover:text-white/60"
+                }`}>
+                {t}
+                {t === "Messages" && user.unreadMessages > 0 && (
+                  <span className="ml-1.5 bg-[#E51A1A] text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">{user.unreadMessages}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Tab Content ── */}
+      <div className="px-4 py-4 max-w-3xl mx-auto">
+        {tab === "Overview" && (
+          <OverviewTab user={user} notifTitle={notifTitle} notifMsg={notifMsg}
+            setNotifTitle={setNotifTitle} setNotifMsg={setNotifMsg}
+            sendNotification={sendNotification} sending={sending} />
+        )}
+        {tab === "Meals" && <MealsTab meals={user.mealLogs} userId={user.id} macroTarget={user.macroTarget} onDelete={deleteMeal} onRefresh={() => router.refresh()} />}
+        {tab === "Weight" && <WeightTab logs={user.weightLogs} userId={user.id} fitnessGoal={user.fitnessGoal} onDelete={(id) => deleteEntry("weight", id)} onRefresh={() => router.refresh()} />}
+        {tab === "Steps" && <StepsTab logs={user.stepLogs} userId={user.id} onDelete={(id) => deleteEntry("step", id)} onRefresh={() => router.refresh()} />}
+        {tab === "Body" && <BodyTab measurements={user.bodyMeasurements} userId={user.id} onDelete={(id) => deleteEntry("measurement", id)} onRefresh={() => router.refresh()} />}
+        {tab === "Photos" && <PhotosTab photos={user.progressPhotos} onView={setPhotoModal} />}
+        {tab === "Messages" && <MessagesTab messages={user.messages} msgText={msgText} setMsgText={setMsgText} sendMessage={sendMessage} sending={sending} />}
+      </div>
+
+      {/* ── Photo Modal ── */}
+      {photoModal && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" onClick={() => setPhotoModal(null)}>
+          <img src={photoModal} alt="Progress" className="max-w-full max-h-[85vh] rounded-lg object-contain" />
+          <button onClick={() => setPhotoModal(null)} className="absolute top-4 right-4 text-white/70 hover:text-white text-3xl cursor-pointer">&times;</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Profile Header ─────────────────────────────────────────────────── */
+
+function ProfileHeader({ user }: { user: UserData }) {
+  const calPct = user.macroTarget ? Math.round((user.avgDailyCals / user.macroTarget.calories) * 100) : 0;
+  const isLossGoal = user.fitnessGoal === "fat_loss" || user.fitnessGoal === "weight_loss";
+
+  return (
+    <div className="px-4 pt-4 pb-3 bg-[#111111]">
+      {/* Back + Name */}
+      <div className="flex items-center gap-3 mb-3">
+        <Link href="/admin/users" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-[#1E1E1E] border border-[#2A2A2A]">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+        </Link>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-bold truncate">{user.firstName} {user.lastName}</h1>
+          <p className="text-xs text-white/40 truncate">{user.email}</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${user.planStatus === "active" ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+            {user.plan}
+          </span>
+          <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${user.isActive ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
+            {user.isActive ? "Active" : "Inactive"}
+          </span>
+        </div>
+      </div>
+
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {/* Avg Daily Cals */}
+        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3 flex items-center gap-2">
+          <MiniRing pct={calPct} color="#E51A1A" size={36} />
+          <div className="min-w-0">
+            <p className="text-xs text-white/40 truncate">Avg Cals</p>
+            <p className="text-sm font-bold">{user.avgDailyCals.toLocaleString()}</p>
+          </div>
+        </div>
+        {/* Avg Daily Steps */}
+        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3">
+          <p className="text-xs text-white/40">Avg Steps</p>
+          <p className="text-sm font-bold">{user.avgDailySteps.toLocaleString()}</p>
+        </div>
+        {/* Weight Change */}
+        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3">
+          <p className="text-xs text-white/40">Wt Change</p>
+          {user.weightChange !== null ? (
+            <p className={`text-sm font-bold ${
+              (isLossGoal && user.weightChange < 0) || (!isLossGoal && user.weightChange > 0)
+                ? "text-green-400" : (user.weightChange === 0 ? "text-white/60" : "text-red-400")
+            }`}>
+              {user.weightChange > 0 ? "+" : ""}{user.weightChange} kg
+            </p>
+          ) : <p className="text-sm text-white/30">--</p>}
+        </div>
+      </div>
+
+      {/* Alert Badges */}
+      <div className="flex flex-wrap gap-2">
+        {user.hoursSinceLastLog !== null && user.hoursSinceLastLog > 48 && (
+          <span className="text-[11px] bg-orange-500/20 text-orange-400 px-2.5 py-1 rounded-full font-medium">
+            No activity for {user.hoursSinceLastLog}h
+          </span>
+        )}
+        {user.unreadMessages > 0 && (
+          <span className="text-[11px] bg-red-500/20 text-red-400 px-2.5 py-1 rounded-full font-medium">
+            {user.unreadMessages} unread message{user.unreadMessages > 1 ? "s" : ""}
+          </span>
+        )}
+        <span className="text-[11px] text-white/30 px-2.5 py-1">
+          Joined {fmtDate(user.createdAt)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Overview Tab ───────────────────────────────────────────────────── */
+
+function OverviewTab({ user, notifTitle, notifMsg, setNotifTitle, setNotifMsg, sendNotification, sending }: {
+  user: UserData; notifTitle: string; notifMsg: string;
+  setNotifTitle: (v: string) => void; setNotifMsg: (v: string) => void;
+  sendNotification: () => void; sending: boolean;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Macro Targets */}
+      {user.macroTarget && (
+        <Card title="Macro Targets">
+          <div className="grid grid-cols-2 gap-3">
+            <MacroItem label="Calories" value={`${user.macroTarget.calories} kcal`} color="#E51A1A" />
+            <MacroItem label="Protein" value={`${user.macroTarget.protein}g`} color="#4CAF50" />
+            <MacroItem label="Carbs" value={`${user.macroTarget.carbs}g`} color="#FFB800" />
+            <MacroItem label="Fat" value={`${user.macroTarget.fat}g`} color="#FF6B00" />
+          </div>
+          <p className="text-xs text-white/30 mt-2">Goal: {user.macroTarget.goal}</p>
+        </Card>
+      )}
+
+      {/* Health Profile */}
+      <Card title="Health Profile">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+          <InfoRow label="Age" value={user.age ? `${user.age}` : "--"} />
+          <InfoRow label="Gender" value={user.gender || "--"} />
+          <InfoRow label="Height" value={user.heightCm ? `${user.heightCm} cm` : "--"} />
+          <InfoRow label="Weight" value={user.currentWeightKg ? `${user.currentWeightKg} kg` : "--"} />
+          <InfoRow label="Body Fat" value={user.bodyFatPercent ? `${user.bodyFatPercent}%` : "--"} />
+          <InfoRow label="Target Wt" value={user.targetWeightKg ? `${user.targetWeightKg} kg` : "--"} />
+          <InfoRow label="Goal" value={user.fitnessGoal?.replace(/_/g, " ") || "--"} />
+          <InfoRow label="Activity" value={user.activityLevel?.replace(/_/g, " ") || "--"} />
+        </div>
+        {user.dietaryPrefs && <p className="text-xs text-white/40 mt-2">Dietary: {user.dietaryPrefs}</p>}
+      </Card>
+
+      {/* Favourites */}
+      {user.favourites.length > 0 && (
+        <Card title={`Favourite Recipes (${user.favourites.length})`}>
+          <div className="space-y-2">
+            {user.favourites.slice(0, 8).map(f => (
+              <div key={f.id} className="flex items-center justify-between min-h-[44px] py-1">
+                <Link href={`/recipes/${f.recipe.slug}`} className="text-sm text-white/80 hover:text-[#E51A1A] transition-colors truncate flex-1 mr-3">
+                  {f.recipe.title}
+                </Link>
+                <span className="text-xs text-white/30 shrink-0">{f.recipe.calories} kcal</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Send Notification */}
+      <Card title="Send Notification">
+        <div className="space-y-3">
+          <input value={notifTitle} onChange={e => setNotifTitle(e.target.value)} placeholder="Title"
+            className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <textarea value={notifMsg} onChange={e => setNotifMsg(e.target.value)} placeholder="Message"
+            className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[80px] resize-none" />
+          <button onClick={sendNotification} disabled={sending || !notifTitle.trim() || !notifMsg.trim()}
+            className="w-full min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer">
+            {sending ? "Sending..." : "Send Notification"}
+          </button>
+        </div>
+      </Card>
+
+      {/* Payment Info */}
+      {user.paymentScreenshot && (
+        <Card title="Payment Info">
+          {user.paymentAccountName && <p className="text-sm text-white/60 mb-2">Account: {user.paymentAccountName}</p>}
+          <img src={user.paymentScreenshot} alt="Payment" className="rounded-lg max-h-60 object-contain w-full" />
+        </Card>
+      )}
+    </div>
+  );
+}
+
+/* ─── Meals Tab ──────────────────────────────────────────────────────── */
+
+function MealsTab({ meals, userId, macroTarget, onDelete, onRefresh }: {
+  meals: MealLog[]; userId: string; macroTarget: UserData["macroTarget"];
+  onDelete: (id: number) => void; onRefresh: () => void;
+}) {
+  const [range, setRange] = useState("7d");
+  const [addOpen, setAddOpen] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  const filtered = useMemo(() => filterByRange(meals, range), [meals, range]);
+
+  // Group by date
+  const grouped = useMemo(() => {
+    const map = new Map<string, MealLog[]>();
+    filtered.forEach(m => {
+      const day = m.loggedDate.slice(0, 10);
+      if (!map.has(day)) map.set(day, []);
+      map.get(day)!.push(m);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [filtered]);
+
+  const toggleDay = (day: string) => {
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      next.has(day) ? next.delete(day) : next.add(day);
+      return next;
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <TimeRangeFilter value={range} onChange={setRange} options={[
+          { label: "7d", value: "7d" }, { label: "30d", value: "30d" },
+          { label: "90d", value: "90d" }, { label: "All", value: "all" },
+        ]} />
+        <button onClick={() => setAddOpen(!addOpen)}
+          className="min-h-[44px] px-4 bg-[#E51A1A] hover:bg-[#c41717] text-white text-sm font-semibold rounded-lg shrink-0 cursor-pointer">
+          + Add
+        </button>
+      </div>
+
+      {addOpen && <AddMealForm userId={userId} onClose={() => setAddOpen(false)} onRefresh={onRefresh} />}
+
+      {grouped.length === 0 && <EmptyState text="No meals logged" />}
+
+      {grouped.map(([day, dayMeals]) => {
+        const totalCals = dayMeals.reduce((s, m) => s + m.calories, 0);
+        const isOpen = expandedDays.has(day);
+        return (
+          <div key={day} className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl overflow-hidden">
+            <button onClick={() => toggleDay(day)}
+              className="w-full flex items-center justify-between px-4 py-3 min-h-[48px] cursor-pointer hover:bg-[#252525] transition-colors">
+              <div className="flex items-center gap-2">
+                <svg className={`w-4 h-4 transition-transform ${isOpen ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                <span className="text-sm font-semibold">{fmtDate(day)}</span>
+                <span className="text-xs text-white/40">{dayMeals.length} meal{dayMeals.length > 1 ? "s" : ""}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${macroTarget && totalCals > macroTarget.calories ? "text-red-400" : "text-white/80"}`}>
+                  {totalCals.toLocaleString()} kcal
+                </span>
+              </div>
+            </button>
+
+            {isOpen && (
+              <div className="border-t border-[#2A2A2A]">
+                {dayMeals.map(m => (
+                  <div key={m.id} className="px-4 py-3 border-b border-[#2A2A2A]/50 last:border-b-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: mealTypeColor[m.mealType] || "#888" }} />
+                          <span className="text-xs font-medium text-white/50">{m.mealType}</span>
+                          <span className="text-xs text-white/30">{m.loggedTime}</span>
+                        </div>
+                        <p className="text-sm text-white/80 line-clamp-2">{m.description}</p>
+                        <div className="flex items-center gap-3 mt-1.5">
+                          <span className="text-xs font-semibold text-white/60">{m.calories} kcal</span>
+                          <span className="text-xs text-green-400">P {m.protein}g</span>
+                          <span className="text-xs text-yellow-400">C {m.carbs}g</span>
+                          <span className="text-xs text-orange-400">F {m.fat}g</span>
+                        </div>
+                      </div>
+                      <button onClick={() => onDelete(m.id)}
+                        className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400/60 hover:text-red-400 cursor-pointer">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Add Meal Form ──────────────────────────────────────────────────── */
+
+function AddMealForm({ userId, onClose, onRefresh }: { userId: string; onClose: () => void; onRefresh: () => void }) {
+  const [form, setForm] = useState({ description: "", mealType: "Snack", calories: "", protein: "", carbs: "", fat: "", date: new Date().toISOString().slice(0, 10), time: "12:00" });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!form.description || !form.calories) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/user-data", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
-          title: notifTitle,
-          message: notifMessage,
-          type: notifType,
+          userId, type: "meal",
+          data: {
+            description: form.description, mealType: form.mealType,
+            calories: parseInt(form.calories), protein: parseFloat(form.protein) || 0,
+            carbs: parseFloat(form.carbs) || 0, fat: parseFloat(form.fat) || 0,
+            loggedDate: form.date, loggedTime: form.time,
+          },
         }),
       });
-      if (res.ok) {
-        setNotifSuccess("Notification sent successfully!");
-        setNotifTitle("");
-        setNotifMessage("");
-        setTimeout(() => setNotifSuccess(""), 3000);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setNotifSending(false);
-    }
-  }
-
-  async function handleDeleteMeal(mealId: number) {
-    if (!confirm("Delete this meal log?")) return;
-    try {
-      const res = await fetch(`/api/admin/meals/${mealId}`, { method: "DELETE" });
-      if (res.ok) {
-        setMealLogs((prev) => prev.filter((m) => m.id !== mealId));
-      } else {
-        alert("Failed to delete meal");
-      }
-    } catch {
-      alert("Failed to delete meal");
-    }
-  }
+      onClose(); onRefresh();
+    } catch { alert("Failed to add meal"); }
+    setSaving(false);
+  };
 
   return (
-    <div className="space-y-6 max-w-full overflow-hidden">
-      {/* Back link */}
-      <Link
-        href="/admin/users"
-        className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Users
-      </Link>
-
-      {/* -- Profile Card ----------------------------------------- */}
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-4 sm:p-6">
-        <div className="flex flex-col md:flex-row md:items-start gap-6">
-          {/* Avatar + Info */}
-          <div className="flex-1 min-w-0 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-lg sm:text-xl font-bold shrink-0">
-                {initials || "?"}
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-white truncate">
-                  {user.firstName} {user.lastName}
-                </h1>
-                <p className="text-sm text-white/50 mt-0.5 truncate">{user.email}</p>
-                {user.country && <p className="text-xs text-white/40 mt-0.5">{user.country}</p>}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${PLAN_COLORS[user.plan] || "bg-white/10 text-white/70"}`}>
-                {user.plan.replace(/_/g, " ")}
-              </span>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[user.planStatus] || "bg-white/10 text-white/70"}`}>
-                {user.planStatus}
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-white/10 text-white/70">
-                {user.role}
-              </span>
-              {!user.isActive && (
-                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400">
-                  Inactive
-                </span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wide">Joined</p>
-                <p className="text-white mt-0.5">{new Date(user.createdAt).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-white/40 text-xs uppercase tracking-wide">Last Login</p>
-                <p className="text-white mt-0.5">
-                  {user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : "Never"}
-                </p>
-              </div>
-              {user.paymentAccountName && (
-                <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wide">Payment Name</p>
-                  <p className="text-white mt-0.5 truncate">{user.paymentAccountName}</p>
-                </div>
-              )}
-              {user.paymentTransactionRef && (
-                <div>
-                  <p className="text-white/40 text-xs uppercase tracking-wide">Transaction Ref</p>
-                  <p className="text-white mt-0.5 truncate">{user.paymentTransactionRef}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Health Profile */}
-            <div className="border-t border-[#2A2A2A] pt-4 mt-4">
-              <p className="text-xs text-white/40 uppercase tracking-wide mb-3 font-semibold">Health Profile</p>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-sm">
-                <div>
-                  <p className="text-white/40 text-xs">Age</p>
-                  <p className="text-white mt-0.5">{user.age ?? "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Gender</p>
-                  <p className="text-white mt-0.5">{formatLabel(user.gender)}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Height</p>
-                  <p className="text-white mt-0.5">{user.heightCm ? `${user.heightCm} cm` : "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Current Weight</p>
-                  <p className="text-white mt-0.5">{user.currentWeightKg ? `${user.currentWeightKg} kg` : "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Body Fat %</p>
-                  <p className="text-white mt-0.5">{user.bodyFatPercent ? `${user.bodyFatPercent}%` : "N/A"}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Fitness Goal</p>
-                  <p className="text-white mt-0.5">{formatLabel(user.fitnessGoal)}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Activity Level</p>
-                  <p className="text-white mt-0.5">{formatLabel(user.activityLevel)}</p>
-                </div>
-                <div>
-                  <p className="text-white/40 text-xs">Target Weight</p>
-                  <p className="text-white mt-0.5">{user.targetWeightKg ? `${user.targetWeightKg} kg` : "N/A"}</p>
-                </div>
-                {parseJsonArray(user.dietaryPrefs).length > 0 && (
-                  <div className="col-span-2">
-                    <p className="text-white/40 text-xs">Dietary Preferences</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {parseJsonArray(user.dietaryPrefs).map((d, i) => (
-                        <span key={i} className="px-2 py-0.5 rounded-full text-xs bg-[#FF6B00]/15 text-[#FF6B00]">{d}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {parseJsonArray(user.healthConditions).length > 0 && (
-                  <div className="col-span-2">
-                    <p className="text-white/40 text-xs">Health Conditions</p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {parseJsonArray(user.healthConditions).map((h, i) => (
-                        <span key={i} className="px-2 py-0.5 rounded-full text-xs bg-[#FFB800]/15 text-[#FFB800]">{h}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Send Notification Button */}
-            <div className="border-t border-[#2A2A2A] pt-4 mt-4">
-              <button
-                onClick={() => setShowNotifForm(!showNotifForm)}
-                className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#E51A1A] text-white hover:bg-[#E51A1A]/80 transition-colors cursor-pointer border-none"
-              >
-                {showNotifForm ? "Cancel" : "Send Notification"}
-              </button>
-              {notifSuccess && <span className="ml-3 text-sm text-green-400">{notifSuccess}</span>}
-              {showNotifForm && (
-                <div className="mt-4 space-y-3 bg-[#141414] border border-[#2A2A2A] rounded-xl p-4">
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Title</label>
-                    <input
-                      type="text"
-                      value={notifTitle}
-                      onChange={(e) => setNotifTitle(e.target.value)}
-                      className="w-full bg-[#1E1E1E] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E51A1A]"
-                      placeholder="Notification title"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Message</label>
-                    <textarea
-                      value={notifMessage}
-                      onChange={(e) => setNotifMessage(e.target.value)}
-                      className="w-full bg-[#1E1E1E] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E51A1A] min-h-[80px] resize-y"
-                      placeholder="Notification message"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-white/50 mb-1">Type</label>
-                    <select
-                      value={notifType}
-                      onChange={(e) => setNotifType(e.target.value)}
-                      className="w-full bg-[#1E1E1E] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#E51A1A]"
-                    >
-                      <option value="admin_alert">Admin Alert</option>
-                      <option value="achievement">Achievement</option>
-                      <option value="system">System</option>
-                    </select>
-                  </div>
-                  <button
-                    onClick={handleSendNotification}
-                    disabled={notifSending || !notifTitle.trim() || !notifMessage.trim()}
-                    className="w-full sm:w-auto px-4 py-2 rounded-lg text-sm font-semibold bg-[#E51A1A] text-white hover:bg-[#E51A1A]/80 transition-colors cursor-pointer border-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {notifSending ? "Sending..." : "Send"}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Payment Screenshot */}
-          {user.paymentScreenshot && (
-            <div className="shrink-0 w-full md:w-auto">
-              <p className="text-xs text-white/40 uppercase tracking-wide mb-2">Payment Screenshot</p>
-              <img
-                src={user.paymentScreenshot}
-                alt="Payment screenshot"
-                onClick={() => setPhotoModal(user.paymentScreenshot)}
-                className="w-full max-w-[280px] md:w-48 h-auto rounded-xl border border-[#2A2A2A] object-contain cursor-pointer hover:opacity-80 transition-opacity"
-              />
-            </div>
-          )}
+    <Card title="Add Meal">
+      <div className="space-y-3">
+        <input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Description"
+          className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+        <select value={form.mealType} onChange={e => setForm({ ...form, mealType: e.target.value })}
+          className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white min-h-[44px]">
+          {["Breakfast", "Lunch", "Dinner", "Snack"].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <div className="grid grid-cols-2 gap-2">
+          <input value={form.calories} onChange={e => setForm({ ...form, calories: e.target.value })} placeholder="Calories" type="number"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.protein} onChange={e => setForm({ ...form, protein: e.target.value })} placeholder="Protein (g)" type="number"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.carbs} onChange={e => setForm({ ...form, carbs: e.target.value })} placeholder="Carbs (g)" type="number"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.fat} onChange={e => setForm({ ...form, fat: e.target.value })} placeholder="Fat (g)" type="number"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} type="date"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white min-h-[44px]" />
+          <input value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} type="time"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white min-h-[44px]" />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 min-h-[44px] bg-[#2A2A2A] text-white/60 text-sm rounded-lg cursor-pointer hover:bg-[#333]">Cancel</button>
+          <button onClick={submit} disabled={saving || !form.description || !form.calories}
+            className="flex-1 min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg cursor-pointer">
+            {saving ? "Saving..." : "Add Meal"}
+          </button>
         </div>
       </div>
-
-      {/* -- Tabs -------------------------------------------------- */}
-      <div className="overflow-x-auto -mx-1 px-1 pb-1">
-        <div className="flex gap-1 flex-nowrap min-w-max">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
-              className={`px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium whitespace-nowrap cursor-pointer border-none transition-colors ${
-                activeTab === t.key
-                  ? "bg-[#E51A1A] text-white"
-                  : "bg-[#1E1E1E] text-white/50 hover:text-white"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* -- Tab Content ------------------------------------------- */}
-      <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl overflow-hidden">
-        {activeTab === "overview" && <OverviewTab user={user} />}
-        {activeTab === "meals" && <MealLogsTab logs={mealLogs} onDelete={handleDeleteMeal} />}
-        {activeTab === "weight" && <WeightTab logs={user.weightLogs} />}
-        {activeTab === "steps" && <StepsTab logs={user.stepLogs} />}
-        {activeTab === "measurements" && <MeasurementsTab data={user.bodyMeasurements} />}
-        {activeTab === "photos" && <PhotosTab photos={user.progressPhotos} />}
-        {activeTab === "favourites" && <FavouritesTab items={user.favourites} />}
-        {activeTab === "messages" && <MessagesTab messages={user.messages} userId={user.id} />}
-      </div>
-
-      {/* Photo Modal */}
-      {photoModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setPhotoModal(null)}
-        >
-          <img src={photoModal} alt="Full size" className="max-w-full max-h-[90vh] rounded-xl" />
-        </div>
-      )}
-    </div>
+    </Card>
   );
 }
 
-/* -- Overview Tab -------------------------------------------------- */
-function OverviewTab({ user }: { user: UserData }) {
-  const totalMeals = user.mealLogs.length;
-  const latestWeight = user.weightLogs.length > 0 ? user.weightLogs[0].weightKg : null;
-  const todayStr = new Date().toISOString().split("T")[0];
-  const todaySteps = user.stepLogs.find((s) => s.loggedDate.startsWith(todayStr));
-  const uniqueDays = new Set(user.mealLogs.map((m) => m.loggedDate.split("T")[0]));
+/* ─── Weight Tab ─────────────────────────────────────────────────────── */
 
-  const summaryCards = [
-    { label: "Total Meals Logged", value: totalMeals.toString(), color: "#E51A1A" },
-    { label: "Current Weight", value: latestWeight ? `${latestWeight.toFixed(1)} kg` : "N/A", color: "#FF6B00" },
-    { label: "Steps Today", value: todaySteps ? todaySteps.steps.toLocaleString() : "0", color: "#FFB800" },
-    { label: "Days Active", value: uniqueDays.size.toString(), color: "#A855F7" },
-  ];
+function WeightTab({ logs, userId, fitnessGoal, onDelete, onRefresh }: {
+  logs: WeightLog[]; userId: string; fitnessGoal: string | null;
+  onDelete: (id: number) => void; onRefresh: () => void;
+}) {
+  const [range, setRange] = useState("90d");
+  const [addOpen, setAddOpen] = useState(false);
+  const filtered = useMemo(() => filterByRange(logs, range), [logs, range]);
+  const sorted = useMemo(() => [...filtered].reverse(), [filtered]);
+  const isLossGoal = fitnessGoal === "fat_loss" || fitnessGoal === "weight_loss";
 
-  return (
-    <div className="p-4 sm:p-6 space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {summaryCards.map((card) => (
-          <div key={card.label} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
-            <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">{card.label}</p>
-            <p className="text-xl sm:text-2xl font-bold mt-1" style={{ color: card.color }}>
-              {card.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* Macro Targets */}
-      {user.macroTarget && (
-        <div>
-          <p className="text-xs text-white/40 uppercase tracking-wide mb-3 font-semibold">Macro Targets</p>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-[#FF6B00]/20 text-[#FF6B00]">
-              {user.macroTarget.goal}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            {[
-              { label: "Calories", value: `${user.macroTarget.calories} kcal`, color: "#E51A1A" },
-              { label: "Protein", value: `${user.macroTarget.protein}g`, color: "#FF6B00" },
-              { label: "Carbs", value: `${user.macroTarget.carbs}g`, color: "#FFB800" },
-              { label: "Fat", value: `${user.macroTarget.fat}g`, color: "#A855F7" },
-            ].map((item) => (
-              <div key={item.label} className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
-                <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">{item.label}</p>
-                <p className="text-lg sm:text-xl font-bold mt-1" style={{ color: item.color }}>
-                  {item.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* -- Meal Logs Tab ------------------------------------------------- */
-function MealLogsTab({ logs, onDelete }: { logs: MealLog[]; onDelete: (id: number) => void }) {
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  if (!logs.length) return <EmptyState text="No meal logs recorded yet." />;
-
-  const grouped: Record<string, MealLog[]> = {};
-  for (const log of logs) {
-    const dateKey = new Date(log.loggedDate).toLocaleDateString();
-    if (!grouped[dateKey]) grouped[dateKey] = [];
-    grouped[dateKey].push(log);
-  }
-
-  function parseIngredients(raw: string | null): { name: string; weightGrams?: number; calories?: number; protein?: number; carbs?: number; fat?: number }[] {
-    if (!raw) return [];
-    try {
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  }
-
-  async function handleDelete(id: number) {
-    setDeletingId(id);
-    await onDelete(id);
-    setDeletingId(null);
-  }
+  const startW = sorted[0]?.weightKg;
+  const endW = sorted[sorted.length - 1]?.weightKg;
+  const change = startW && endW ? Math.round((endW - startW) * 10) / 10 : null;
 
   return (
-    <div className="p-4 sm:p-0">
-      {/* Mobile cards */}
-      <div className="sm:hidden space-y-4">
-        {Object.entries(grouped).map(([date, items]) => {
-          const totals = items.reduce(
-            (acc, m) => ({
-              calories: acc.calories + m.calories,
-              protein: acc.protein + m.protein,
-              carbs: acc.carbs + m.carbs,
-              fat: acc.fat + m.fat,
-            }),
-            { calories: 0, protein: 0, carbs: 0, fat: 0 }
-          );
-
-          return (
-            <div key={date}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">{date}</p>
-                <p className="text-xs text-[#FF6B00] font-semibold">{totals.calories} kcal total</p>
-              </div>
-              <div className="space-y-2">
-                {items.map((m) => {
-                  const ingredients = parseIngredients(m.ingredients);
-                  const isExpanded = expandedId === m.id;
-                  return (
-                    <div
-                      key={m.id}
-                      className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3"
-                    >
-                      <div
-                        className="cursor-pointer"
-                        onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-white font-medium truncate">{m.description}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-white/10 text-white/60">{m.mealType}</span>
-                              {m.loggedTime && <span className="text-[10px] text-white/30">{m.loggedTime}</span>}
-                            </div>
-                          </div>
-                          {m.imageData && (
-                            <img src={m.imageData} alt="meal" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                          )}
-                        </div>
-                        <div className="grid grid-cols-4 gap-2 mt-2">
-                          <div className="text-center">
-                            <p className="text-[10px] text-white/30">Cals</p>
-                            <p className="text-xs font-semibold text-[#E51A1A]">{m.calories}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] text-white/30">Protein</p>
-                            <p className="text-xs font-semibold text-[#FF6B00]">{m.protein.toFixed(0)}g</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] text-white/30">Carbs</p>
-                            <p className="text-xs font-semibold text-[#FFB800]">{m.carbs.toFixed(0)}g</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] text-white/30">Fat</p>
-                            <p className="text-xs font-semibold text-[#A855F7]">{m.fat.toFixed(0)}g</p>
-                          </div>
-                        </div>
-                      </div>
-                      {isExpanded && ingredients.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-[#2A2A2A]">
-                          <p className="text-[10px] text-white/40 uppercase tracking-wide mb-2">Ingredients</p>
-                          <div className="space-y-1">
-                            {ingredients.map((ing, idx) => (
-                              <div key={idx} className="flex items-center justify-between text-xs text-white/60">
-                                <span>{ing.name}</span>
-                                <span className="text-white/30 shrink-0 ml-2">
-                                  {ing.calories !== undefined && `${ing.calories} kcal`}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      <div className="mt-2 pt-2 border-t border-[#2A2A2A] flex justify-end">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
-                          disabled={deletingId === m.id}
-                          className="text-[10px] text-red-400/60 hover:text-red-400 bg-transparent border-none cursor-pointer disabled:opacity-40"
-                        >
-                          {deletingId === m.id ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <TimeRangeFilter value={range} onChange={setRange} options={[
+          { label: "30d", value: "30d" }, { label: "90d", value: "90d" }, { label: "All", value: "all" },
+        ]} />
+        <button onClick={() => setAddOpen(!addOpen)}
+          className="min-h-[44px] px-4 bg-[#E51A1A] hover:bg-[#c41717] text-white text-sm font-semibold rounded-lg shrink-0 cursor-pointer">
+          + Add
+        </button>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-left font-medium">Meal</th>
-              <th className="px-4 py-3 text-left font-medium">Type</th>
-              <th className="px-4 py-3 text-right font-medium">Cals</th>
-              <th className="px-4 py-3 text-right font-medium">P</th>
-              <th className="px-4 py-3 text-right font-medium">C</th>
-              <th className="px-4 py-3 text-right font-medium">F</th>
-              <th className="px-4 py-3 text-center font-medium">Photo</th>
-              <th className="px-4 py-3 text-center font-medium w-16"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(grouped).map(([date, items]) => {
-              const totals = items.reduce(
-                (acc, m) => ({
-                  calories: acc.calories + m.calories,
-                  protein: acc.protein + m.protein,
-                  carbs: acc.carbs + m.carbs,
-                  fat: acc.fat + m.fat,
-                }),
-                { calories: 0, protein: 0, carbs: 0, fat: 0 }
-              );
+      {addOpen && <AddWeightForm userId={userId} onClose={() => setAddOpen(false)} onRefresh={onRefresh} />}
 
-              return (
-                <Fragment key={date}>
-                  {items.map((m) => {
-                    const ingredients = parseIngredients(m.ingredients);
-                    const isExpanded = expandedId === m.id;
-                    return (
-                      <Fragment key={m.id}>
-                        <tr
-                          className="border-b border-[#2A2A2A]/50 text-white/80 cursor-pointer hover:bg-[#141414]"
-                          onClick={() => setExpandedId(isExpanded ? null : m.id)}
-                        >
-                          <td className="px-4 py-2.5">{date}</td>
-                          <td className="px-4 py-2.5 max-w-[200px] truncate">{m.description}</td>
-                          <td className="px-4 py-2.5">
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-white/10">{m.mealType}</span>
-                          </td>
-                          <td className="px-4 py-2.5 text-right">{m.calories}</td>
-                          <td className="px-4 py-2.5 text-right">{m.protein.toFixed(0)}g</td>
-                          <td className="px-4 py-2.5 text-right">{m.carbs.toFixed(0)}g</td>
-                          <td className="px-4 py-2.5 text-right">{m.fat.toFixed(0)}g</td>
-                          <td className="px-4 py-2.5 text-center">
-                            {m.imageData ? (
-                              <img src={m.imageData} alt="meal" className="w-8 h-8 rounded object-cover inline-block" />
-                            ) : (
-                              <span className="text-white/20">--</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2.5 text-center">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(m.id); }}
-                              disabled={deletingId === m.id}
-                              className="text-[10px] text-red-400/50 hover:text-red-400 bg-transparent border-none cursor-pointer disabled:opacity-40"
-                            >
-                              {deletingId === m.id ? "..." : "Delete"}
-                            </button>
-                          </td>
-                        </tr>
-                        {isExpanded && ingredients.length > 0 && (
-                          <tr className="bg-[#0A0A0A]">
-                            <td colSpan={9} className="px-6 py-3">
-                              <p className="text-xs text-white/40 uppercase tracking-wide mb-2">Ingredients</p>
-                              <div className="space-y-1">
-                                {ingredients.map((ing, idx) => (
-                                  <div key={idx} className="flex items-center gap-4 text-xs text-white/70">
-                                    <span className="flex-1">{ing.name}</span>
-                                    {ing.weightGrams && <span>{ing.weightGrams}g</span>}
-                                    {ing.calories !== undefined && <span>{ing.calories} kcal</span>}
-                                    {ing.protein !== undefined && <span>P:{ing.protein}g</span>}
-                                    {ing.carbs !== undefined && <span>C:{ing.carbs}g</span>}
-                                    {ing.fat !== undefined && <span>F:{ing.fat}g</span>}
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                  <tr className="border-b border-[#2A2A2A] bg-[#141414] text-[#FF6B00] font-semibold text-xs">
-                    <td className="px-4 py-2" colSpan={3}>
-                      Daily Total
-                    </td>
-                    <td className="px-4 py-2 text-right">{totals.calories}</td>
-                    <td className="px-4 py-2 text-right">{totals.protein.toFixed(0)}g</td>
-                    <td className="px-4 py-2 text-right">{totals.carbs.toFixed(0)}g</td>
-                    <td className="px-4 py-2 text-right">{totals.fat.toFixed(0)}g</td>
-                    <td className="px-4 py-2" colSpan={2} />
-                  </tr>
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+      {/* SVG Chart */}
+      {sorted.length >= 2 && <WeightChart data={sorted} />}
 
-/* -- Weight Tab ---------------------------------------------------- */
-function WeightTab({ logs }: { logs: WeightLog[] }) {
-  const [range, setRange] = useState("30d");
-
-  if (!logs.length) return <EmptyState text="No weight logs recorded yet." />;
-
-  const filtered = filterByRange(logs, range);
-  const sorted = [...filtered].sort(
-    (a, b) => new Date(a.loggedDate).getTime() - new Date(b.loggedDate).getTime()
-  );
-
-  const weights = sorted.map((w) => w.weightKg);
-  const minW = Math.min(...weights) - 2;
-  const maxW = Math.max(...weights) + 2;
-  const weightRange = maxW - minW || 1;
-
-  const chartW = 700;
-  const chartH = 200;
-  const padX = 40;
-  const padY = 20;
-  const plotW = chartW - padX * 2;
-  const plotH = chartH - padY * 2;
-
-  const points = sorted.map((w, i) => {
-    const x = padX + (i / Math.max(sorted.length - 1, 1)) * plotW;
-    const y = padY + plotH - ((w.weightKg - minW) / weightRange) * plotH;
-    return { x, y, weight: w.weightKg, date: w.loggedDate };
-  });
-
-  const linePath = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-
-  const reverseSorted = [...sorted].reverse();
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="mb-2">
-        <TimeRangeFilter value={range} onChange={setRange} options={ADMIN_RANGE_OPTIONS} />
-      </div>
-      <div className="w-full overflow-hidden">
-        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full">
-          {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-            const y = padY + plotH - pct * plotH;
-            const val = (minW + pct * weightRange).toFixed(1);
-            return (
-              <g key={pct}>
-                <line x1={padX} y1={y} x2={chartW - padX} y2={y} stroke="#2A2A2A" strokeWidth={1} />
-                <text x={padX - 5} y={y + 4} fill="#666" fontSize="10" textAnchor="end">
-                  {val}
-                </text>
-              </g>
-            );
-          })}
-          <path d={linePath} fill="none" stroke="#E51A1A" strokeWidth={2} />
-          {points.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r={3} fill="#E51A1A" />
-          ))}
-        </svg>
-      </div>
-
-      {/* Mobile cards */}
-      <div className="sm:hidden space-y-2">
-        {reverseSorted.map((w, i) => {
-          const next = i < reverseSorted.length - 1 ? reverseSorted[i + 1].weightKg : null;
-          const change = next !== null ? w.weightKg - next : null;
-          return (
-            <div key={w.id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white font-medium">{w.weightKg.toFixed(1)} kg</p>
-                <p className="text-xs text-white/40 mt-0.5">{new Date(w.loggedDate).toLocaleDateString()}</p>
-              </div>
-              {change !== null ? (
-                <span className={`text-sm font-semibold ${change > 0 ? "text-red-400" : change < 0 ? "text-green-400" : "text-white/40"}`}>
-                  {change > 0 ? "+" : ""}{change.toFixed(1)} kg
-                </span>
-              ) : (
-                <span className="text-sm text-white/20">--</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-right font-medium">Weight (kg)</th>
-              <th className="px-4 py-3 text-right font-medium">Change</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reverseSorted.map((w, i) => {
-              const next = i < reverseSorted.length - 1 ? reverseSorted[i + 1].weightKg : null;
-              const change = next !== null ? w.weightKg - next : null;
-              return (
-                <tr key={w.id} className="border-b border-[#2A2A2A]/50 text-white/80">
-                  <td className="px-4 py-2.5">{new Date(w.loggedDate).toLocaleDateString()}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">{w.weightKg.toFixed(1)}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    {change !== null ? (
-                      <span className={change > 0 ? "text-red-400" : change < 0 ? "text-green-400" : "text-white/40"}>
-                        {change > 0 ? "+" : ""}
-                        {change.toFixed(1)} kg
-                      </span>
-                    ) : (
-                      <span className="text-white/30">--</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* -- Steps Tab ----------------------------------------------------- */
-function StepsTab({ logs }: { logs: StepLog[] }) {
-  const [range, setRange] = useState("30d");
-
-  if (!logs.length) return <EmptyState text="No step logs recorded yet." />;
-
-  const filtered = filterByRange(logs, range);
-  const sorted = [...filtered].sort(
-    (a, b) => new Date(a.loggedDate).getTime() - new Date(b.loggedDate).getTime()
-  );
-
-  const steps = sorted.map((s) => s.steps);
-  const maxSteps = Math.max(...steps, 1);
-  const avg = Math.round(steps.reduce((a, b) => a + b, 0) / steps.length);
-  const best = sorted.reduce((max, s) => (s.steps > max.steps ? s : max), sorted[0]);
-  const goalMetCount = sorted.filter((s) => s.steps >= s.goal).length;
-
-  const chartW = 700;
-  const chartH = 200;
-  const padX = 40;
-  const padY = 20;
-  const plotW = chartW - padX * 2;
-  const plotH = chartH - padY * 2;
-  const barW = Math.max(4, plotW / sorted.length - 2);
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="mb-2">
-        <TimeRangeFilter value={range} onChange={setRange} options={ADMIN_RANGE_OPTIONS} />
-      </div>
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4">
-        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">Average</p>
-          <p className="text-lg sm:text-xl font-bold text-[#FF6B00] mt-1">{avg.toLocaleString()}</p>
-        </div>
-        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">Best Day</p>
-          <p className="text-lg sm:text-xl font-bold text-[#FFB800] mt-1">{best.steps.toLocaleString()}</p>
-          <p className="text-[10px] text-white/30">{new Date(best.loggedDate).toLocaleDateString()}</p>
-        </div>
-        <div className="bg-[#141414] border border-[#2A2A2A] rounded-xl p-3 sm:p-4 text-center">
-          <p className="text-[10px] sm:text-xs text-white/40 uppercase tracking-wide">Goal Met</p>
-          <p className="text-lg sm:text-xl font-bold text-green-400 mt-1">{goalMetCount}/{sorted.length}</p>
-        </div>
-      </div>
-
-      {/* SVG Bar Chart */}
-      <div className="w-full overflow-hidden">
-        <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full">
-          {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
-            const y = padY + plotH - pct * plotH;
-            const val = Math.round(pct * maxSteps);
-            return (
-              <g key={pct}>
-                <line x1={padX} y1={y} x2={chartW - padX} y2={y} stroke="#2A2A2A" strokeWidth={1} />
-                <text x={padX - 5} y={y + 4} fill="#666" fontSize="9" textAnchor="end">
-                  {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}
-                </text>
-              </g>
-            );
-          })}
-          {sorted.map((s, i) => {
-            const x = padX + (i / Math.max(sorted.length - 1, 1)) * plotW - barW / 2;
-            const h = (s.steps / maxSteps) * plotH;
-            const y = padY + plotH - h;
-            const metGoal = s.steps >= s.goal;
-            return (
-              <rect
-                key={i}
-                x={x}
-                y={y}
-                width={barW}
-                height={h}
-                rx={2}
-                fill="#FF6B00"
-                opacity={metGoal ? 1 : 0.4}
-              />
-            );
-          })}
-        </svg>
-      </div>
-
-      {/* Mobile cards */}
-      <div className="sm:hidden space-y-2">
-        {[...sorted].reverse().map((s) => {
-          const metGoal = s.steps >= s.goal;
-          return (
-            <div key={s.id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3 flex items-center justify-between">
-              <div>
-                <p className="text-sm text-white font-medium">{s.steps.toLocaleString()} steps</p>
-                <p className="text-xs text-white/40 mt-0.5">{new Date(s.loggedDate).toLocaleDateString()}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-white/40">Goal: {s.goal.toLocaleString()}</p>
-                <span className={`text-[10px] font-semibold ${metGoal ? "text-green-400" : "text-red-400"}`}>
-                  {metGoal ? "Met" : "Missed"}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-right font-medium">Steps</th>
-              <th className="px-4 py-3 text-right font-medium">Goal</th>
-              <th className="px-4 py-3 text-center font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...sorted].reverse().map((s) => {
-              const metGoal = s.steps >= s.goal;
-              return (
-                <tr key={s.id} className="border-b border-[#2A2A2A]/50 text-white/80">
-                  <td className="px-4 py-2.5">{new Date(s.loggedDate).toLocaleDateString()}</td>
-                  <td className="px-4 py-2.5 text-right font-medium">{s.steps.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-right text-white/50">{s.goal.toLocaleString()}</td>
-                  <td className="px-4 py-2.5 text-center">
-                    <span className={`text-xs font-semibold ${metGoal ? "text-green-400" : "text-red-400"}`}>
-                      {metGoal ? "Met" : "Missed"}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* -- Measurements Tab ---------------------------------------------- */
-function MeasurementsTab({ data }: { data: BodyMeasurement[] }) {
-  const [range, setRange] = useState("30d");
-
-  if (!data.length) return <EmptyState text="No body measurements recorded yet." />;
-
-  const filtered = filterByRange(data, range);
-  const sorted = [...filtered].sort(
-    (a, b) => new Date(a.loggedDate).getTime() - new Date(b.loggedDate).getTime()
-  );
-
-  const weightPoints = sorted.filter((d) => d.weightKg != null).map((d) => ({ date: d.loggedDate, val: d.weightKg! }));
-  const bellyPoints = sorted.filter((d) => d.bellyInches != null).map((d) => ({ date: d.loggedDate, val: d.bellyInches! }));
-
-  function MiniLineChart({ points, color, label }: { points: { date: string; val: number }[]; color: string; label: string }) {
-    if (points.length < 2) return null;
-    const vals = points.map((p) => p.val);
-    const minV = Math.min(...vals) - 1;
-    const maxV = Math.max(...vals) + 1;
-    const rng = maxV - minV || 1;
-    const w = 350, h = 120, px = 30, py = 15;
-    const pw = w - px * 2, ph = h - py * 2;
-
-    const pts = points.map((p, i) => ({
-      x: px + (i / Math.max(points.length - 1, 1)) * pw,
-      y: py + ph - ((p.val - minV) / rng) * ph,
-    }));
-    const path = pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-
-    return (
-      <div className="w-full overflow-hidden">
-        <p className="text-xs text-white/40 uppercase tracking-wide mb-2">{label}</p>
-        <svg viewBox={`0 0 ${w} ${h}`} className="w-full">
-          {[0, 0.5, 1].map((pct) => {
-            const y = py + ph - pct * ph;
-            return (
-              <g key={pct}>
-                <line x1={px} y1={y} x2={w - px} y2={y} stroke="#2A2A2A" strokeWidth={1} />
-                <text x={px - 4} y={y + 3} fill="#666" fontSize="8" textAnchor="end">
-                  {(minV + pct * rng).toFixed(1)}
-                </text>
-              </g>
-            );
-          })}
-          <path d={path} fill="none" stroke={color} strokeWidth={2} />
-          {pts.map((p, i) => (
-            <circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color} />
-          ))}
-        </svg>
-      </div>
-    );
-  }
-
-  const reverseSorted = [...sorted].reverse();
-
-  return (
-    <div className="p-4 sm:p-6 space-y-6">
-      <div className="mb-2">
-        <TimeRangeFilter value={range} onChange={setRange} options={ADMIN_RANGE_OPTIONS} />
-      </div>
-      {/* Charts */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <MiniLineChart points={weightPoints} color="#E51A1A" label="Weight Over Time (kg)" />
-        <MiniLineChart points={bellyPoints} color="#FF6B00" label="Belly Over Time (inches)" />
-      </div>
-
-      {/* Mobile cards */}
-      <div className="sm:hidden space-y-2">
-        {reverseSorted.map((m) => (
-          <div key={m.id} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl p-3">
-            <p className="text-xs text-white/50 mb-2">{new Date(m.loggedDate).toLocaleDateString()}</p>
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <p className="text-[10px] text-white/30">Weight</p>
-                <p className="text-xs font-semibold text-white">{m.weightKg?.toFixed(1) ?? "--"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/30">Belly</p>
-                <p className="text-xs font-semibold text-white">{m.bellyInches?.toFixed(1) ?? "--"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/30">Waist</p>
-                <p className="text-xs font-semibold text-white">{m.waistInches?.toFixed(1) ?? "--"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/30">Chest</p>
-                <p className="text-xs font-semibold text-white">{m.chestInches?.toFixed(1) ?? "--"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/30">Hips</p>
-                <p className="text-xs font-semibold text-white">{m.hipsInches?.toFixed(1) ?? "--"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/30">Arms</p>
-                <p className="text-xs font-semibold text-white">{m.armsInches?.toFixed(1) ?? "--"}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[#2A2A2A] text-white/40 text-xs uppercase tracking-wide">
-              <th className="px-4 py-3 text-left font-medium">Date</th>
-              <th className="px-4 py-3 text-right font-medium">Weight</th>
-              <th className="px-4 py-3 text-right font-medium">Belly</th>
-              <th className="px-4 py-3 text-right font-medium">Waist</th>
-              <th className="px-4 py-3 text-right font-medium">Chest</th>
-              <th className="px-4 py-3 text-right font-medium">Hips</th>
-              <th className="px-4 py-3 text-right font-medium">Arms</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reverseSorted.map((m) => (
-              <tr key={m.id} className="border-b border-[#2A2A2A]/50 text-white/80">
-                <td className="px-4 py-2.5">{new Date(m.loggedDate).toLocaleDateString()}</td>
-                <td className="px-4 py-2.5 text-right">{m.weightKg?.toFixed(1) ?? "--"}</td>
-                <td className="px-4 py-2.5 text-right">{m.bellyInches?.toFixed(1) ?? "--"}</td>
-                <td className="px-4 py-2.5 text-right">{m.waistInches?.toFixed(1) ?? "--"}</td>
-                <td className="px-4 py-2.5 text-right">{m.chestInches?.toFixed(1) ?? "--"}</td>
-                <td className="px-4 py-2.5 text-right">{m.hipsInches?.toFixed(1) ?? "--"}</td>
-                <td className="px-4 py-2.5 text-right">{m.armsInches?.toFixed(1) ?? "--"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* -- Photos Tab ---------------------------------------------------- */
-function PhotosTab({ photos }: { photos: ProgressPhoto[] }) {
-  const [modal, setModal] = useState<string | null>(null);
-
-  if (!photos.length) return <EmptyState text="No progress photos uploaded yet." />;
-
-  return (
-    <div className="p-4 sm:p-6">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-        {photos.map((p) => (
-          <div key={p.id} className="space-y-2">
-            <div
-              className="aspect-[3/4] rounded-xl overflow-hidden border border-[#2A2A2A] bg-[#141414] cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => setModal(p.imageData)}
-            >
-              <img
-                src={p.imageData}
-                alt={`Progress photo ${new Date(p.photoDate).toLocaleDateString()}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <p className="text-xs text-white/50">{new Date(p.photoDate).toLocaleDateString()}</p>
-            {p.notes && <p className="text-xs text-white/30 line-clamp-2">{p.notes}</p>}
-          </div>
-        ))}
-      </div>
-
-      {modal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setModal(null)}
-        >
-          <img src={modal} alt="Full size" className="max-w-full max-h-[90vh] rounded-xl" />
+      {change !== null && (
+        <div className="grid grid-cols-3 gap-2">
+          <StatCard label="Start" value={`${startW} kg`} />
+          <StatCard label="Current" value={`${endW} kg`} />
+          <StatCard label="Change" value={`${change > 0 ? "+" : ""}${change} kg`}
+            color={(isLossGoal && change < 0) || (!isLossGoal && change > 0) ? "text-green-400" : change === 0 ? "text-white/60" : "text-red-400"} />
         </div>
       )}
+
+      {filtered.length === 0 && <EmptyState text="No weight logs" />}
+
+      {/* Card List */}
+      {filtered.map((w, i) => {
+        const prev = filtered[i + 1];
+        const diff = prev ? Math.round((w.weightKg - prev.weightKg) * 10) / 10 : null;
+        return (
+          <div key={w.id} className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl px-4 py-3 flex items-center justify-between min-h-[48px]">
+            <div>
+              <p className="text-sm font-semibold">{w.weightKg} kg</p>
+              <p className="text-xs text-white/40">{fmtDate(w.loggedDate)}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {diff !== null && (
+                <span className={`text-xs font-semibold ${
+                  (isLossGoal && diff < 0) || (!isLossGoal && diff > 0) ? "text-green-400" : diff === 0 ? "text-white/30" : "text-red-400"
+                }`}>
+                  {diff > 0 ? "+" : ""}{diff}
+                </span>
+              )}
+              <button onClick={() => onDelete(w.id)}
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400/60 hover:text-red-400 cursor-pointer">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-/* -- Favourites Tab ------------------------------------------------ */
-function FavouritesTab({ items }: { items: FavouriteItem[] }) {
-  if (!items.length) return <EmptyState text="No favourite recipes yet." />;
+/* ─── Weight Chart (SVG) ─────────────────────────────────────────────── */
+
+function WeightChart({ data }: { data: WeightLog[] }) {
+  const W = 600, H = 200, PX = 40, PY = 20;
+  const min = Math.min(...data.map(d => d.weightKg)) - 1;
+  const max = Math.max(...data.map(d => d.weightKg)) + 1;
+  const xStep = data.length > 1 ? (W - PX * 2) / (data.length - 1) : 0;
+
+  const points = data.map((d, i) => ({
+    x: PX + i * xStep,
+    y: PY + (H - PY * 2) - ((d.weightKg - min) / (max - min)) * (H - PY * 2),
+  }));
+  const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${p.x},${p.y}`).join(" ");
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((f) => (
-          <Link
-            key={f.id}
-            href={`/hub/recipes/${f.recipe.slug}`}
-            className="flex items-center justify-between bg-[#141414] border border-[#2A2A2A] rounded-xl px-4 py-3 hover:border-[#E51A1A]/40 transition-colors"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-white truncate">{f.recipe.title}</p>
-              <p className="text-xs text-white/40 mt-0.5">
-                {f.recipe.calories} kcal | {f.recipe.protein}g protein
+    <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3 overflow-hidden">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        {/* Grid lines */}
+        {[0, 0.25, 0.5, 0.75, 1].map(f => {
+          const y = PY + (H - PY * 2) * (1 - f);
+          const val = (min + (max - min) * f).toFixed(1);
+          return (
+            <g key={f}>
+              <line x1={PX} y1={y} x2={W - PX} y2={y} stroke="#2A2A2A" strokeWidth={0.5} />
+              <text x={PX - 4} y={y + 3} fill="#666" fontSize={10} textAnchor="end">{val}</text>
+            </g>
+          );
+        })}
+        {/* Line */}
+        <path d={line} fill="none" stroke="#E51A1A" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Dots */}
+        {points.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3} fill="#E51A1A" />)}
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Add Weight Form ────────────────────────────────────────────────── */
+
+function AddWeightForm({ userId, onClose, onRefresh }: { userId: string; onClose: () => void; onRefresh: () => void }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), weight: "" });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!form.weight) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/user-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, type: "weight", data: { weightKg: parseFloat(form.weight), loggedDate: form.date } }),
+      });
+      onClose(); onRefresh();
+    } catch { alert("Failed to add weight"); }
+    setSaving(false);
+  };
+
+  return (
+    <Card title="Add Weight">
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          <input value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} type="date"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white min-h-[44px]" />
+          <input value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} placeholder="Weight (kg)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 min-h-[44px] bg-[#2A2A2A] text-white/60 text-sm rounded-lg cursor-pointer hover:bg-[#333]">Cancel</button>
+          <button onClick={submit} disabled={saving || !form.weight}
+            className="flex-1 min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg cursor-pointer">
+            {saving ? "Saving..." : "Add Weight"}
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* ─── Steps Tab ──────────────────────────────────────────────────────── */
+
+function StepsTab({ logs, userId, onDelete, onRefresh }: {
+  logs: StepLog[]; userId: string; onDelete: (id: number) => void; onRefresh: () => void;
+}) {
+  const [range, setRange] = useState("30d");
+  const [addOpen, setAddOpen] = useState(false);
+  const filtered = useMemo(() => filterByRange(logs, range), [logs, range]);
+  const sorted = useMemo(() => [...filtered].reverse(), [filtered]);
+
+  const avg = filtered.length > 0 ? Math.round(filtered.reduce((s, l) => s + l.steps, 0) / filtered.length) : 0;
+  const best = filtered.length > 0 ? Math.max(...filtered.map(l => l.steps)) : 0;
+  const goalMet = filtered.filter(l => l.steps >= l.goal).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <TimeRangeFilter value={range} onChange={setRange} options={[
+          { label: "7d", value: "7d" }, { label: "30d", value: "30d" },
+          { label: "90d", value: "90d" }, { label: "All", value: "all" },
+        ]} />
+        <button onClick={() => setAddOpen(!addOpen)}
+          className="min-h-[44px] px-4 bg-[#E51A1A] hover:bg-[#c41717] text-white text-sm font-semibold rounded-lg shrink-0 cursor-pointer">
+          + Add
+        </button>
+      </div>
+
+      {addOpen && <AddStepForm userId={userId} onClose={() => setAddOpen(false)} onRefresh={onRefresh} />}
+
+      {/* Bar Chart */}
+      {sorted.length >= 2 && <StepBarChart data={sorted} />}
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2">
+        <StatCard label="Avg Steps" value={avg.toLocaleString()} />
+        <StatCard label="Best" value={best.toLocaleString()} />
+        <StatCard label="Goal Met" value={`${goalMet}/${filtered.length}`} color={goalMet > filtered.length / 2 ? "text-green-400" : "text-white/60"} />
+      </div>
+
+      {filtered.length === 0 && <EmptyState text="No step logs" />}
+
+      {/* Card List */}
+      {filtered.map(s => {
+        const pct = Math.round((s.steps / s.goal) * 100);
+        return (
+          <div key={s.id} className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl px-4 py-3 flex items-center justify-between min-h-[48px]">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold">{s.steps.toLocaleString()}</p>
+                <span className={`text-xs font-medium ${pct >= 100 ? "text-green-400" : "text-white/40"}`}>{pct}%</span>
+              </div>
+              <p className="text-xs text-white/40">{fmtDate(s.loggedDate)} &middot; Goal: {s.goal.toLocaleString()}</p>
+            </div>
+            <button onClick={() => onDelete(s.id)}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400/60 hover:text-red-400 cursor-pointer">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ─── Step Bar Chart ─────────────────────────────────────────────────── */
+
+function StepBarChart({ data }: { data: StepLog[] }) {
+  const W = 600, H = 180, PX = 10, PY = 20;
+  const maxSteps = Math.max(...data.map(d => d.steps), ...data.map(d => d.goal));
+  const barW = Math.max(4, (W - PX * 2) / data.length - 2);
+
+  return (
+    <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3 overflow-hidden">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        {data.map((d, i) => {
+          const x = PX + i * ((W - PX * 2) / data.length);
+          const barH = (d.steps / maxSteps) * (H - PY * 2);
+          const goalH = (d.goal / maxSteps) * (H - PY * 2);
+          return (
+            <g key={i}>
+              <rect x={x} y={H - PY - barH} width={barW} height={barH} rx={2}
+                fill={d.steps >= d.goal ? "#4CAF50" : "#E51A1A"} opacity={0.8} />
+              <line x1={x} y1={H - PY - goalH} x2={x + barW} y2={H - PY - goalH} stroke="#FFB800" strokeWidth={1} strokeDasharray="3,2" />
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Add Step Form ──────────────────────────────────────────────────── */
+
+function AddStepForm({ userId, onClose, onRefresh }: { userId: string; onClose: () => void; onRefresh: () => void }) {
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), steps: "", goal: "10000" });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!form.steps) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/user-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, type: "step", data: { steps: parseInt(form.steps), goal: parseInt(form.goal), loggedDate: form.date } }),
+      });
+      onClose(); onRefresh();
+    } catch { alert("Failed to add steps"); }
+    setSaving(false);
+  };
+
+  return (
+    <Card title="Add Steps">
+      <div className="space-y-3">
+        <div className="grid grid-cols-3 gap-2">
+          <input value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} type="date"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white min-h-[44px]" />
+          <input value={form.steps} onChange={e => setForm({ ...form, steps: e.target.value })} placeholder="Steps" type="number"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.goal} onChange={e => setForm({ ...form, goal: e.target.value })} placeholder="Goal" type="number"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 min-h-[44px] bg-[#2A2A2A] text-white/60 text-sm rounded-lg cursor-pointer hover:bg-[#333]">Cancel</button>
+          <button onClick={submit} disabled={saving || !form.steps}
+            className="flex-1 min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg cursor-pointer">
+            {saving ? "Saving..." : "Add Steps"}
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* ─── Body Tab (Measurements) ────────────────────────────────────────── */
+
+function BodyTab({ measurements, userId, onDelete, onRefresh }: {
+  measurements: BodyMeasurement[]; userId: string; onDelete: (id: number) => void; onRefresh: () => void;
+}) {
+  const [range, setRange] = useState("90d");
+  const [addOpen, setAddOpen] = useState(false);
+  const filtered = useMemo(() => filterByRange(measurements, range), [measurements, range]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <TimeRangeFilter value={range} onChange={setRange} options={[
+          { label: "30d", value: "30d" }, { label: "90d", value: "90d" }, { label: "All", value: "all" },
+        ]} />
+        <button onClick={() => setAddOpen(!addOpen)}
+          className="min-h-[44px] px-4 bg-[#E51A1A] hover:bg-[#c41717] text-white text-sm font-semibold rounded-lg shrink-0 cursor-pointer">
+          + Add
+        </button>
+      </div>
+
+      {addOpen && <AddMeasurementForm userId={userId} onClose={() => setAddOpen(false)} onRefresh={onRefresh} />}
+
+      {filtered.length === 0 && <EmptyState text="No body measurements" />}
+
+      {filtered.map(b => (
+        <div key={b.id} className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold">{fmtDate(b.loggedDate)}</p>
+            <button onClick={() => onDelete(b.id)}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400/60 hover:text-red-400 cursor-pointer">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-x-3 gap-y-1.5 text-xs">
+            {b.weightKg && <MeasureItem label="Weight" value={`${b.weightKg} kg`} />}
+            {b.bellyInches && <MeasureItem label="Belly" value={`${b.bellyInches}"`} />}
+            {b.waistInches && <MeasureItem label="Waist" value={`${b.waistInches}"`} />}
+            {b.chestInches && <MeasureItem label="Chest" value={`${b.chestInches}"`} />}
+            {b.hipsInches && <MeasureItem label="Hips" value={`${b.hipsInches}"`} />}
+            {b.armsInches && <MeasureItem label="Arms" value={`${b.armsInches}"`} />}
+          </div>
+          {b.notes && <p className="text-xs text-white/40 mt-2">{b.notes}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Add Measurement Form ───────────────────────────────────────────── */
+
+function AddMeasurementForm({ userId, onClose, onRefresh }: { userId: string; onClose: () => void; onRefresh: () => void }) {
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10), weightKg: "", bellyInches: "",
+    waistInches: "", chestInches: "", hipsInches: "", armsInches: "", notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/admin/user-data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId, type: "measurement",
+          data: {
+            loggedDate: form.date,
+            weightKg: form.weightKg ? parseFloat(form.weightKg) : null,
+            bellyInches: form.bellyInches ? parseFloat(form.bellyInches) : null,
+            waistInches: form.waistInches ? parseFloat(form.waistInches) : null,
+            chestInches: form.chestInches ? parseFloat(form.chestInches) : null,
+            hipsInches: form.hipsInches ? parseFloat(form.hipsInches) : null,
+            armsInches: form.armsInches ? parseFloat(form.armsInches) : null,
+            notes: form.notes || null,
+          },
+        }),
+      });
+      onClose(); onRefresh();
+    } catch { alert("Failed to add measurement"); }
+    setSaving(false);
+  };
+
+  return (
+    <Card title="Add Measurement">
+      <div className="space-y-3">
+        <input value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} type="date"
+          className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white min-h-[44px]" />
+        <div className="grid grid-cols-2 gap-2">
+          <input value={form.weightKg} onChange={e => setForm({ ...form, weightKg: e.target.value })} placeholder="Weight (kg)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.bellyInches} onChange={e => setForm({ ...form, bellyInches: e.target.value })} placeholder="Belly (in)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.waistInches} onChange={e => setForm({ ...form, waistInches: e.target.value })} placeholder="Waist (in)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.chestInches} onChange={e => setForm({ ...form, chestInches: e.target.value })} placeholder="Chest (in)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.hipsInches} onChange={e => setForm({ ...form, hipsInches: e.target.value })} placeholder="Hips (in)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <input value={form.armsInches} onChange={e => setForm({ ...form, armsInches: e.target.value })} placeholder="Arms (in)" type="number" step="0.1"
+            className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+        </div>
+        <textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Notes"
+          className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/30 min-h-[60px] resize-none" />
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 min-h-[44px] bg-[#2A2A2A] text-white/60 text-sm rounded-lg cursor-pointer hover:bg-[#333]">Cancel</button>
+          <button onClick={submit} disabled={saving}
+            className="flex-1 min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg cursor-pointer">
+            {saving ? "Saving..." : "Add Measurement"}
+          </button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* ─── Photos Tab ─────────────────────────────────────────────────────── */
+
+function PhotosTab({ photos, onView }: { photos: ProgressPhoto[]; onView: (url: string) => void }) {
+  if (photos.length === 0) return <EmptyState text="No progress photos" />;
+
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {photos.map(p => (
+        <button key={p.id} onClick={() => onView(p.imageData)}
+          className="aspect-square bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl overflow-hidden cursor-pointer group relative">
+          <img src={p.imageData} alt="Progress" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-2 pb-2 pt-6">
+            <p className="text-[11px] text-white/80 font-medium">{fmtDateShort(p.photoDate)}</p>
+            {p.notes && <p className="text-[10px] text-white/50 truncate">{p.notes}</p>}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ─── Messages Tab ───────────────────────────────────────────────────── */
+
+function MessagesTab({ messages, msgText, setMsgText, sendMessage, sending }: {
+  messages: Message[]; msgText: string; setMsgText: (v: string) => void;
+  sendMessage: () => void; sending: boolean;
+}) {
+  const sorted = useMemo(() => [...messages].reverse(), [messages]);
+
+  return (
+    <div className="flex flex-col" style={{ minHeight: "60vh" }}>
+      {/* Chat messages */}
+      <div className="flex-1 space-y-3 mb-4">
+        {sorted.length === 0 && <EmptyState text="No messages yet" />}
+        {sorted.map(m => (
+          <div key={m.id} className={`flex ${m.isSentByUser ? "justify-start" : "justify-end"}`}>
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${
+              m.isSentByUser ? "bg-[#1E1E1E] border border-[#2A2A2A]" : "bg-[#E51A1A]/20 border border-[#E51A1A]/30"
+            }`}>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-semibold text-white/50">{m.senderName}</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${m.senderRole === "ADMIN" ? "bg-[#E51A1A]/20 text-[#E51A1A]" : "bg-white/10 text-white/40"}`}>
+                  {m.senderRole === "ADMIN" ? "Admin" : "User"}
+                </span>
+              </div>
+              <p className="text-sm text-white/80">{m.content}</p>
+              {m.imageData && (
+                <img src={m.imageData} alt="Attachment" className="mt-2 rounded-lg max-h-48 object-contain" />
+              )}
+              <p className="text-[10px] text-white/30 mt-1 text-right">
+                {new Date(m.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
               </p>
             </div>
-            <svg className="w-4 h-4 text-white/30 shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          </div>
         ))}
+      </div>
+
+      {/* Send message input */}
+      <div className="sticky bottom-0 bg-[#0A0A0A] border-t border-[#2A2A2A] pt-3 pb-2">
+        <div className="flex gap-2">
+          <input value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Send a message..."
+            onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            className="flex-1 bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/30 min-h-[44px]" />
+          <button onClick={sendMessage} disabled={sending || !msgText.trim()}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white rounded-xl cursor-pointer">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-/* -- Messages Tab -------------------------------------------------- */
-function MessagesTab({ messages, userId }: { messages: MessageItem[]; userId: string }) {
-  return (
-    <div className="p-4 sm:p-6 space-y-4">
-      {messages.length === 0 ? (
-        <EmptyState text="No messages yet." />
-      ) : (
-        <div className="space-y-3">
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={`rounded-xl px-4 py-3 border border-[#2A2A2A] ${
-                m.isSentByUser ? "bg-[#141414]" : "bg-[#1A1A2E]"
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
-                <span className="text-xs font-semibold text-white/60">
-                  {m.isSentByUser ? `From: ${m.senderName}` : `From: ${m.senderName} (Admin)`}
-                </span>
-                <span className="text-[10px] sm:text-xs text-white/30">
-                  {new Date(m.createdAt).toLocaleString()}
-                </span>
-              </div>
-              <p className="text-sm text-white/80 break-words">{m.content}</p>
-              {!m.isRead && (
-                <span className="inline-block mt-1 text-xs text-[#FFB800]">Unread</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+/* ─── Shared UI Components ───────────────────────────────────────────── */
 
-      <Link
-        href={`/admin/messages?user=${userId}`}
-        className="inline-flex items-center gap-2 text-sm text-[#E51A1A] hover:underline"
-      >
-        View all messages
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-white/70 mb-3">{title}</h3>
+      {children}
     </div>
   );
 }
 
-/* -- Empty State --------------------------------------------------- */
+function MacroItem({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <div className="flex items-center gap-2 min-h-[36px]">
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      <div>
+        <p className="text-xs text-white/40">{label}</p>
+        <p className="text-sm font-semibold">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between items-center min-h-[28px]">
+      <span className="text-white/40 text-xs">{label}</span>
+      <span className="text-white/80 text-xs font-medium capitalize">{value}</span>
+    </div>
+  );
+}
+
+function StatCard({ label, value, color = "text-white" }: { label: string; value: string; color?: string }) {
+  return (
+    <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl px-3 py-2.5 text-center">
+      <p className="text-xs text-white/40">{label}</p>
+      <p className={`text-sm font-bold ${color}`}>{value}</p>
+    </div>
+  );
+}
+
+function MeasureItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="text-white/40">{label}: </span>
+      <span className="text-white/80 font-medium">{value}</span>
+    </div>
+  );
+}
+
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="flex items-center justify-center py-16">
-      <p className="text-sm text-white/30">{text}</p>
+    <div className="text-center py-12">
+      <p className="text-white/30 text-sm">{text}</p>
     </div>
   );
 }

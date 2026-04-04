@@ -4,11 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import UserDetailClient from "./UserDetailClient";
 
-interface Props {
-  params: Promise<{ id: string }>;
-}
-
-export default async function AdminUserDetailPage({ params }: Props) {
+export default async function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const admin = await getCurrentUser();
   if (!admin || admin.role !== "ADMIN") redirect("/login");
@@ -16,140 +12,107 @@ export default async function AdminUserDetailPage({ params }: Props) {
   const user = await prisma.user.findUnique({
     where: { id },
     include: {
-      mealLogs: { orderBy: { loggedDate: "desc" }, take: 30 },
+      mealLogs: { orderBy: { loggedDate: "desc" }, take: 100 },
       weightLogs: { orderBy: { loggedDate: "desc" }, take: 90 },
       progressPhotos: { orderBy: { photoDate: "desc" }, take: 20 },
       macroTarget: true,
       favourites: { include: { recipe: true } },
-      stepLogs: { orderBy: { loggedDate: "desc" }, take: 30 },
-      bodyMeasurements: { orderBy: { loggedDate: "desc" }, take: 10 },
+      stepLogs: { orderBy: { loggedDate: "desc" }, take: 90 },
+      bodyMeasurements: { orderBy: { loggedDate: "desc" }, take: 30 },
     },
   });
 
   if (!user) redirect("/admin/users");
 
-  // Fetch last 20 messages involving this user
+  // Last activity metrics
+  const lastMealLog = user.mealLogs[0];
+  const hoursSinceLastLog = lastMealLog
+    ? Math.floor((Date.now() - new Date(lastMealLog.loggedDate).getTime()) / (1000 * 60 * 60))
+    : null;
+
+  // Unread messages from this user
+  const unreadMessages = await prisma.message.count({
+    where: { senderId: id, isRead: false },
+  });
+
+  // Messages
   const messages = await prisma.message.findMany({
-    where: {
-      OR: [{ senderId: id }, { receiverId: id }],
-    },
+    where: { OR: [{ senderId: id }, { receiverId: id }] },
     orderBy: { createdAt: "desc" },
-    take: 20,
+    take: 30,
     include: {
-      sender: { select: { firstName: true, lastName: true } },
-      receiver: { select: { firstName: true, lastName: true } },
+      sender: { select: { firstName: true, lastName: true, role: true } },
     },
   });
 
-  // Fetch notifications for this user
-  const notifications = await prisma.notification.findMany({
-    where: { userId: id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  // Calc averages
+  const last7Meals = user.mealLogs.filter(m => new Date(m.loggedDate) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const avgDailyCals = last7Meals.length > 0 ? Math.round(last7Meals.reduce((s, m) => s + m.calories, 0) / 7) : 0;
 
-  // Serialize dates for client component
+  const last7Steps = user.stepLogs.filter(s => new Date(s.loggedDate) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const avgDailySteps = last7Steps.length > 0 ? Math.round(last7Steps.reduce((s, l) => s + l.steps, 0) / 7) : 0;
+
+  const firstWeight = user.weightLogs[user.weightLogs.length - 1];
+  const latestWeight = user.weightLogs[0];
+  const weightChange = (firstWeight && latestWeight) ? Math.round((latestWeight.weightKg - firstWeight.weightKg) * 10) / 10 : null;
+
+  // Serialize all data
   const serialized = {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    country: user.country || "",
-    role: user.role,
-    plan: user.plan,
-    planStatus: user.planStatus,
+    // User profile
+    id: user.id, firstName: user.firstName, lastName: user.lastName,
+    email: user.email, country: user.country || "",
+    role: user.role, plan: user.plan, planStatus: user.planStatus,
     isActive: user.isActive,
+    age: user.age, gender: user.gender, heightCm: user.heightCm,
+    currentWeightKg: user.currentWeightKg, bodyFatPercent: user.bodyFatPercent,
+    fitnessGoal: user.fitnessGoal, activityLevel: user.activityLevel,
+    dietaryPrefs: user.dietaryPrefs, targetWeightKg: user.targetWeightKg,
     createdAt: user.createdAt.toISOString(),
     lastLoginAt: user.lastLoginAt?.toISOString() || null,
-    paymentScreenshot: user.paymentScreenshot || null,
-    paymentAccountName: user.paymentAccountName || null,
-    paymentTransactionRef: user.paymentTransactionRef || null,
-    // Health profile
-    age: user.age,
-    gender: user.gender,
-    heightCm: user.heightCm,
-    currentWeightKg: user.currentWeightKg,
-    bodyFatPercent: user.bodyFatPercent,
-    fitnessGoal: user.fitnessGoal,
-    activityLevel: user.activityLevel,
-    dietaryPrefs: user.dietaryPrefs,
-    healthConditions: user.healthConditions,
-    targetWeightKg: user.targetWeightKg,
-    macroTarget: user.macroTarget
-      ? {
-          calories: user.macroTarget.calories,
-          protein: user.macroTarget.protein,
-          carbs: user.macroTarget.carbs,
-          fat: user.macroTarget.fat,
-          goal: user.macroTarget.goal,
-        }
-      : null,
-    mealLogs: user.mealLogs.map((m) => ({
-      id: m.id,
-      description: m.description,
-      mealType: m.mealType,
-      calories: m.calories,
-      protein: m.protein,
-      carbs: m.carbs,
-      fat: m.fat,
-      loggedDate: m.loggedDate.toISOString(),
-      loggedTime: m.loggedTime,
-      imageData: m.imageData || null,
-      ingredients: m.ingredients || null,
+    paymentScreenshot: user.paymentScreenshot,
+    paymentAccountName: user.paymentAccountName,
+
+    // Quick stats
+    avgDailyCals, avgDailySteps, weightChange,
+    hoursSinceLastLog, unreadMessages,
+
+    // Macro targets
+    macroTarget: user.macroTarget ? {
+      calories: user.macroTarget.calories, protein: user.macroTarget.protein,
+      carbs: user.macroTarget.carbs, fat: user.macroTarget.fat, goal: user.macroTarget.goal,
+    } : null,
+
+    // Data arrays (serialized dates)
+    mealLogs: user.mealLogs.map(m => ({
+      id: m.id, description: m.description, mealType: m.mealType,
+      calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat,
+      imageData: m.imageData, ingredients: m.ingredients,
+      loggedDate: m.loggedDate.toISOString(), loggedTime: m.loggedTime,
     })),
-    weightLogs: user.weightLogs.map((w) => ({
-      id: w.id,
-      weightKg: w.weightKg,
-      loggedDate: w.loggedDate.toISOString(),
+    weightLogs: user.weightLogs.map(w => ({
+      id: w.id, weightKg: w.weightKg, loggedDate: w.loggedDate.toISOString(),
     })),
-    progressPhotos: user.progressPhotos.map((p) => ({
-      id: p.id,
-      imageData: p.imageData,
-      photoDate: p.photoDate.toISOString(),
-      notes: p.notes || "",
+    stepLogs: user.stepLogs.map(s => ({
+      id: s.id, steps: s.steps, goal: s.goal, loggedDate: s.loggedDate.toISOString(),
     })),
-    favourites: user.favourites.map((f) => ({
-      id: f.id,
-      recipe: {
-        id: f.recipe.id,
-        title: f.recipe.title,
-        slug: f.recipe.slug,
-        calories: f.recipe.calories,
-        protein: f.recipe.protein,
-      },
+    bodyMeasurements: user.bodyMeasurements.map(b => ({
+      id: b.id, loggedDate: b.loggedDate.toISOString(),
+      weightKg: b.weightKg, bellyInches: b.bellyInches,
+      waistInches: b.waistInches, chestInches: b.chestInches,
+      hipsInches: b.hipsInches, armsInches: b.armsInches,
+      imageData: b.imageData, notes: b.notes,
     })),
-    stepLogs: user.stepLogs.map((s) => ({
-      id: s.id,
-      steps: s.steps,
-      goal: s.goal,
-      loggedDate: s.loggedDate.toISOString(),
+    progressPhotos: user.progressPhotos.map(p => ({
+      id: p.id, imageData: p.imageData, photoDate: p.photoDate.toISOString(), notes: p.notes || "",
     })),
-    bodyMeasurements: user.bodyMeasurements.map((b) => ({
-      id: b.id,
-      loggedDate: b.loggedDate.toISOString(),
-      weightKg: b.weightKg,
-      bellyInches: b.bellyInches,
-      chestInches: b.chestInches,
-      waistInches: b.waistInches,
-      hipsInches: b.hipsInches,
-      armsInches: b.armsInches,
+    favourites: user.favourites.map(f => ({
+      id: f.id, recipe: { id: f.recipe.id, title: f.recipe.title, slug: f.recipe.slug, calories: f.recipe.calories },
     })),
-    messages: messages.map((m) => ({
-      id: m.id,
-      content: m.content,
-      isRead: m.isRead,
-      createdAt: m.createdAt.toISOString(),
+    messages: messages.map(m => ({
+      id: m.id, content: m.content, imageData: m.imageData,
+      isRead: m.isRead, createdAt: m.createdAt.toISOString(),
       senderName: `${m.sender.firstName} ${m.sender.lastName}`,
-      receiverName: `${m.receiver.firstName} ${m.receiver.lastName}`,
-      isSentByUser: m.senderId === id,
-    })),
-    notifications: notifications.map((n) => ({
-      id: n.id,
-      title: n.title,
-      message: n.message,
-      type: n.type,
-      isRead: n.isRead,
-      createdAt: n.createdAt.toISOString(),
+      senderRole: m.sender.role, isSentByUser: m.senderId === id,
     })),
   };
 
