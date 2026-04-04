@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 
 export default async function Footer() {
   let socials: { name: string; url: string; visible: boolean }[] = [];
+  let siteName = "Level Up";
 
   try {
     const settings = await prisma.siteContent.findMany({
@@ -12,6 +13,7 @@ export default async function Footer() {
           in: [
             "social_youtube", "social_instagram", "social_facebook", "social_tiktok",
             "social_youtube_visible", "social_instagram_visible", "social_facebook_visible", "social_tiktok_visible",
+            "site_name",
           ],
         },
       },
@@ -19,6 +21,8 @@ export default async function Footer() {
 
     const s: Record<string, string> = {};
     for (const item of settings) s[item.contentKey] = item.contentValue;
+
+    if (s.site_name) siteName = s.site_name;
 
     socials = [
       { name: "YouTube", url: s.social_youtube || "", visible: s.social_youtube_visible === "true" },
@@ -43,17 +47,17 @@ export default async function Footer() {
             <div className="flex items-center gap-2.5 mb-4">
               <Image
                 src="/images/logo.svg"
-                alt="Level Up"
+                alt={siteName}
                 width={36}
                 height={36}
                 className="rounded-full"
               />
               <span className="font-bold text-base tracking-wider uppercase">
-                Level Up
+                {siteName}
               </span>
             </div>
             <p className="text-white/50 text-sm mt-2">
-              &copy; 2026 LEVEL UP. All rights reserved.
+              &copy; 2026 {siteName.toUpperCase()}. All rights reserved.
             </p>
           </div>
 

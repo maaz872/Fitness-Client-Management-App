@@ -38,6 +38,11 @@ export default async function HomePage() {
   const cfg: Record<string, string> = {};
   for (const s of siteSettings) cfg[s.contentKey] = s.contentValue;
 
+  const siteNameEntry = siteSettings.find((s) => s.contentKey === "site_name");
+  const siteName = siteNameEntry?.contentValue || "Level Up";
+  const coachNameEntry = siteSettings.find((s) => s.contentKey === "coach_name");
+  const coachName = coachNameEntry?.contentValue || "Coach Raheel";
+
   return (
     <>
       {/* ── Section 1: Hero ── */}
@@ -46,7 +51,7 @@ export default async function HomePage() {
         <div className="lg:hidden absolute inset-0">
           <Image
             src="/images/Coach_Hero.svg"
-            alt="Coach Raheel"
+            alt={coachName}
             fill
             priority
             className="object-cover"
@@ -66,7 +71,7 @@ export default async function HomePage() {
                 Build The Body<br />You Deserve.
               </h1>
               <p className="text-white/70 text-lg md:text-xl max-w-[600px] mb-10 leading-relaxed">
-                Level Up gives you the proven nutrition tools, recipes, and tracking system
+                {siteName} gives you the proven nutrition tools, recipes, and tracking system
                 you need to lose fat, build lean muscle, and keep it off for good.
               </p>
               <div className="flex flex-wrap gap-4">
@@ -84,7 +89,7 @@ export default async function HomePage() {
               <div className="relative w-full max-w-[500px] h-[600px]">
                 <Image
                   src="/images/Coach_Hero.svg"
-                  alt="Coach Raheel"
+                  alt={coachName}
                   fill
                   priority
                   className="object-contain object-bottom"

@@ -1,21 +1,37 @@
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 
 export const metadata: Metadata = {
-  title: "About Coach Raheel | Level Up",
+  title: "About | Level Up",
   description:
-    "Meet Coach Raheel — Athletic Therapist, Personal Trainer, and the founder of Level Up. Learn about his science-backed approach to fat loss and body recomposition.",
+    "Meet the coach behind Level Up. Learn about the science-backed approach to fat loss and body recomposition.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  let coachName = "Coach Raheel";
+  let siteName = "Level Up";
+
+  try {
+    const settings = await prisma.siteContent.findMany({
+      where: { contentKey: { in: ["coach_name", "site_name"] } },
+    });
+    for (const s of settings) {
+      if (s.contentKey === "coach_name") coachName = s.contentValue;
+      if (s.contentKey === "site_name") siteName = s.contentValue;
+    }
+  } catch {
+    // use defaults
+  }
+
   return (
     <>
       {/* Hero Banner */}
       <section className="relative h-[400px]">
         <Image
           src="/images/Coach_4.jpeg"
-          alt="Coach Raheel"
+          alt={coachName}
           fill
           priority
           className="object-cover"
@@ -26,7 +42,7 @@ export default function AboutPage() {
             <span className="inline-block bg-[#E51A1A]/10 border border-[#E51A1A]/30 text-[#E51A1A] text-xs font-bold uppercase tracking-wider px-4 py-2 rounded-full mb-4">
               About
             </span>
-            <h1 className="text-4xl md:text-6xl font-black text-white">Meet Coach Raheel</h1>
+            <h1 className="text-4xl md:text-6xl font-black text-white">Meet {coachName}</h1>
           </div>
         </div>
       </section>
@@ -38,7 +54,7 @@ export default function AboutPage() {
           <div className="relative h-[500px] md:h-[600px] rounded-2xl overflow-hidden border border-[#2A2A2A]">
             <Image
               src="/images/Coach_1.jpeg"
-              alt="Coach Raheel - back muscles"
+              alt={`${coachName} - back muscles`}
               fill
               className="object-cover"
             />
@@ -47,11 +63,11 @@ export default function AboutPage() {
           {/* Bio Text */}
           <div className="space-y-6">
             <h2 className="text-3xl md:text-4xl font-black text-white mb-4">
-              The Coach Behind Level Up
+              The Coach Behind {siteName}
             </h2>
 
             <p className="text-white/70 leading-relaxed">
-              Coach Raheel is a qualified Athletic Therapist (B.Sc Hons) and certified
+              {coachName} is a qualified Athletic Therapist (B.Sc Hons) and certified
               Personal Trainer with years of hands-on experience in fat loss, body
               recomposition, and performance training. His background in both clinical
               rehabilitation and strength training gives him a unique edge when it comes
@@ -62,12 +78,12 @@ export default function AboutPage() {
               His philosophy is straightforward: no fad diets, no extreme restrictions,
               no quick fixes. Everything is rooted in science-backed nutrition and
               training principles that fit your real life. Whether you work long hours,
-              travel regularly, or have family commitments, Raheel designs programmes
+              travel regularly, or have family commitments, {coachName.split(" ").pop()} designs programmes
               that work around your lifestyle — not the other way around.
             </p>
 
             <p className="text-white/70 leading-relaxed">
-              Since founding Level Up, Coach Raheel has helped hundreds of people
+              Since founding {siteName}, {coachName} has helped hundreds of people
               transform their bodies and their confidence. His clients range from
               complete beginners stepping into the gym for the first time to advanced
               lifters looking to break through plateaus — men and women of all ages

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import PasswordInput from "@/components/ui/PasswordInput";
+import { useBranding } from "@/lib/branding";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { siteName } = useBranding();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,7 +53,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[420px]">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-black mb-2">Welcome Back</h1>
-          <p className="text-white/50">Log in to access your Hub account</p>
+          <p className="text-white/50">Log in to access your {siteName} account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

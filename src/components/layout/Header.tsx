@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/ui/NotificationBell";
+import { useBranding } from "@/lib/branding";
 
 interface AuthUser {
   id: number;
@@ -22,6 +23,7 @@ export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { siteName, coachName } = useBranding();
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -79,7 +81,7 @@ export default function Header() {
     ];
   })();
 
-  const displayName = user?.role === "ADMIN" ? "Coach Raheel" : user?.firstName ?? "";
+  const displayName = user?.role === "ADMIN" ? coachName : user?.firstName ?? "";
 
   return (
     <>
@@ -89,13 +91,13 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2.5">
             <Image
               src="/images/logo.svg"
-              alt="Level Up"
+              alt={siteName}
               width={40}
               height={40}
               className="rounded-full"
             />
             <span className="text-white font-bold text-[1.1rem] tracking-wider uppercase">
-              Level Up
+              {siteName}
             </span>
           </Link>
 

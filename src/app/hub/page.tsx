@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import TimeRangeFilter from "@/components/ui/TimeRangeFilter";
+import { useBranding } from "@/lib/branding";
 
 type DashboardData = {
   user: { firstName: string; lastName: string } | null;
@@ -42,6 +43,7 @@ export default function HubDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [range, setRange] = useState("today");
+  const { siteName } = useBranding();
 
   useEffect(() => {
     setLoading(true);
@@ -74,7 +76,7 @@ export default function HubDashboard() {
           Welcome back{data?.user ? `, ${data.user.firstName}` : ""}!
         </h1>
         <p className="text-white/50">
-          Your Hub dashboard. Everything you need in one place.
+          Your {siteName} dashboard. Everything you need in one place.
         </p>
       </div>
 

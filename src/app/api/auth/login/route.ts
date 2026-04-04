@@ -32,6 +32,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Read coach name from DB for error messages
+    const coachEntry = await prisma.siteContent.findUnique({
+      where: { contentKey: "coach_name" },
+    });
+    const coachName = coachEntry?.contentValue || "Coach Raheel";
+
     // Check planStatus for the unified user model
     const status = user.planStatus;
 
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Your account is pending approval. Coach Raheel will review and activate your account within 24 hours of payment confirmation.",
+            `Your account is pending approval. ${coachName} will review and activate your account within 24 hours of payment confirmation.`,
         },
         { status: 403 }
       );
@@ -49,7 +55,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Your plan has expired or been cancelled. Please contact Coach Raheel to renew your access.",
+            `Your plan has expired or been cancelled. Please contact ${coachName} to renew your access.`,
         },
         { status: 403 }
       );
@@ -60,7 +66,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Your account is not active. Please contact Coach Raheel for assistance.",
+            `Your account is not active. Please contact ${coachName} for assistance.`,
         },
         { status: 403 }
       );

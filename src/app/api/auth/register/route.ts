@@ -56,6 +56,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Read coach name from DB
+    const coachEntry = await prisma.siteContent.findUnique({
+      where: { contentKey: "coach_name" },
+    });
+    const coachName = coachEntry?.contentValue || "Coach Raheel";
+
     // Create user in DB with unified plan model + health profile
     await prisma.user.create({
       data: {
@@ -89,7 +95,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message:
-        "Your account has been created! Coach Raheel will review and activate your account within 24 hours of payment confirmation.",
+        `Your account has been created! ${coachName} will review and activate your account within 24 hours of payment confirmation.`,
     });
   } catch (error) {
     console.error("Registration error:", error);

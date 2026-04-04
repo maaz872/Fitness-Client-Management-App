@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useBranding } from "@/lib/branding";
 
 const sidebarGroups = [
   {
     label: "OVERVIEW",
     links: [
       { href: "/admin", label: "Dashboard" },
+      { href: "/admin/branding", label: "Branding" },
     ],
   },
   {
@@ -37,6 +39,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { coachName } = useBranding();
+
+  const coachInitials = coachName
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   useEffect(() => {
     document.body.style.overflow = sidebarOpen ? "hidden" : "";
@@ -93,10 +103,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-5 border-b border-[#1A1A1A]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              CR
+              {coachInitials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white truncate">Coach Raheel</p>
+              <p className="text-sm font-bold text-white truncate">{coachName}</p>
               <p className="text-[10px] text-white/30">Admin Panel</p>
             </div>
           </div>
@@ -157,10 +167,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex items-center justify-between p-5 border-b border-[#1A1A1A]">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-[#E51A1A] flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              CR
+              {coachInitials}
             </div>
             <div>
-              <p className="text-sm font-bold text-white">Coach Raheel</p>
+              <p className="text-sm font-bold text-white">{coachName}</p>
               <p className="text-[10px] text-white/30">Admin Panel</p>
             </div>
           </div>

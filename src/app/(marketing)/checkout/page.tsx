@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import PasswordInput from "@/components/ui/PasswordInput";
+import { useBranding } from "@/lib/branding";
 
 type Step = "account" | "health" | "payment" | "success";
 
@@ -36,6 +37,7 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<Step>("account");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const { siteName, coachName } = useBranding();
 
   // Account form state
   const [firstName, setFirstName] = useState("");
@@ -303,7 +305,7 @@ export default function CheckoutPage() {
               Account Created!
             </h2>
             <p className="text-white/50 mb-8">
-              Your payment proof has been submitted. Coach Raheel will review
+              Your payment proof has been submitted. {coachName} will review
               and activate your account within 24 hours.
             </p>
             <Button href="/">Back to Home</Button>
@@ -703,7 +705,7 @@ export default function CheckoutPage() {
                         Account Name
                       </span>
                       <span className="text-white font-semibold">
-                        Coach Raheel - Level Up
+                        {coachName} - {siteName}
                       </span>
                     </div>
                     <div className="h-px bg-[#2A2A2A]" />

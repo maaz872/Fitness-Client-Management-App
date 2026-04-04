@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/ui/NotificationBell";
+import { useBranding } from "@/lib/branding";
 
 const sidebarGroups = [
   {
@@ -59,6 +60,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
   const [calorieTarget, setCalorieTarget] = useState(2000);
   const [steps, setSteps] = useState(0);
   const [stepGoal, setStepGoal] = useState(10000);
+  const { siteName } = useBranding();
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -246,7 +248,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
               <p className="text-sm font-bold text-white truncate">
                 {userName || "The Hub"}
               </p>
-              <p className="text-[10px] text-white/30">Level Up Hub</p>
+              <p className="text-[10px] text-white/30">{siteName} Hub</p>
             </div>
             <NotificationBell />
           </div>
@@ -289,7 +291,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
           </svg>
         </button>
         <span className="text-white font-bold text-sm tracking-wider uppercase">
-          Level Up
+          {siteName}
         </span>
         <NotificationBell />
       </div>
