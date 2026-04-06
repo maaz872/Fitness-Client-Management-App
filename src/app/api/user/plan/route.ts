@@ -1,13 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    // Optional date param — defaults to today
+    const dateParam = request.nextUrl.searchParams.get("date");
 
     // Find active plan
     const plan = await prisma.clientPlan.findFirst({
@@ -38,43 +41,50 @@ export async function GET() {
       return NextResponse.json({ plan: null });
     }
 
-    // Calculate current week and day
-    const now = new Date();
     const startDate = new Date(plan.startDate);
-    const diffMs = now.getTime() - startDate.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const weekNumber = Math.floor(diffDays / 7) + 1;
+    const now = new Date();
 
-    // Day of week: 1=Mon, 7=Sun
-    const jsDay = now.getDay(); // 0=Sun, 1=Mon...6=Sat
-    const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+    // "Today" always refers to the actual current date
+    const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayDiffMs = todayDate.getTime() - startDate.getTime();
+    const todayDiffDays = Math.floor(todayDiffMs / (1000 * 60 * 60 * 24));
+    const todayWeekNumber = Math.floor(todayDiffDays / 7) + 1;
+    const todayJsDay = todayDate.getDay();
+    const todayDayOfWeek = todayJsDay === 0 ? 7 : todayJsDay;
+
+    // Target date — either from param or today
+    const targetDate = dateParam ? new Date(dateParam + "T00:00:00") : todayDate;
+    const targetDiffMs = targetDate.getTime() - startDate.getTime();
+    const targetDiffDays = Math.floor(targetDiffMs / (1000 * 60 * 60 * 24));
+    const targetWeekNumber = Math.floor(targetDiffDays / 7) + 1;
+    const targetJsDay = targetDate.getDay();
+    const targetDayOfWeek = targetJsDay === 0 ? 7 : targetJsDay;
 
     // Total weeks from plan days
     const maxWeek = plan.days.reduce((max, d) => Math.max(max, d.weekNumber), 1);
 
-    // Find today's plan day
-    const todayPlanDay = plan.days.find(
-      (d) => d.weekNumber === weekNumber && d.dayOfWeek === dayOfWeek
+    // Find the target day's plan data
+    const targetPlanDay = plan.days.find(
+      (d) => d.weekNumber === targetWeekNumber && d.dayOfWeek === targetDayOfWeek
     );
 
-    // Get today's date at midnight UTC
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
+    // Get target date progress
+    const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const targetEnd = new Date(targetStart);
+    targetEnd.setDate(targetEnd.getDate() + 1);
 
-    // Get today's progress
-    const todayProgress = await prisma.dailyProgress.findFirst({
+    const targetProgress = await prisma.dailyProgress.findFirst({
       where: {
         userId: user.userId,
         clientPlanId: plan.id,
-        date: { gte: todayStart, lt: todayEnd },
+        date: { gte: targetStart, lt: targetEnd },
       },
     });
 
-    // Get this week's progress (Mon-Sun)
-    const mondayOffset = dayOfWeek - 1;
-    const weekStart = new Date(todayStart);
-    weekStart.setDate(weekStart.getDate() - mondayOffset);
+    // Get the TARGET WEEK's progress (Mon-Sun of the selected week)
+    const targetMondayOffset = targetDayOfWeek - 1;
+    const weekStart = new Date(targetStart);
+    weekStart.setDate(weekStart.getDate() - targetMondayOffset);
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
 
@@ -87,17 +97,22 @@ export async function GET() {
       orderBy: { date: "asc" },
     });
 
-    // Parse mealPlan JSON if it exists
+    // Parse mealPlan JSON
     let mealPlan = null;
-    if (todayPlanDay?.mealPlan) {
+    if (targetPlanDay?.mealPlan) {
       try {
-        mealPlan = typeof todayPlanDay.mealPlan === "string"
-          ? JSON.parse(todayPlanDay.mealPlan)
-          : todayPlanDay.mealPlan;
+        mealPlan = typeof targetPlanDay.mealPlan === "string"
+          ? JSON.parse(targetPlanDay.mealPlan)
+          : targetPlanDay.mealPlan;
       } catch {
-        mealPlan = todayPlanDay.mealPlan;
+        mealPlan = targetPlanDay.mealPlan;
       }
     }
+
+    // Determine if viewing today, past, or future
+    const targetStr = targetStart.toISOString().split("T")[0];
+    const todayStr = todayDate.toISOString().split("T")[0];
+    const viewMode = targetStr === todayStr ? "today" : targetStart < todayDate ? "past" : "future";
 
     return NextResponse.json({
       plan: {
@@ -105,34 +120,39 @@ export async function GET() {
         name: plan.name,
         type: plan.type,
         startDate: plan.startDate,
-        weekNumber,
-        dayOfWeek,
+        weekNumber: targetWeekNumber,
+        dayOfWeek: targetDayOfWeek,
         totalWeeks: maxWeek,
+        // Include today's position so frontend can highlight it
+        todayWeekNumber,
+        todayDayOfWeek,
       },
+      viewMode, // "today" | "past" | "future"
+      selectedDate: targetStr,
       today: {
-        workout: todayPlanDay?.workout || null,
+        workout: targetPlanDay?.workout || null,
         mealPlan,
-        meals: (todayPlanDay?.meals || []).map((m) => ({
+        meals: (targetPlanDay?.meals || []).map((m) => ({
           id: m.id,
           mealType: m.mealType,
           servings: m.servings,
           sortOrder: m.sortOrder,
           recipe: m.recipe,
         })),
-        calorieTarget: todayPlanDay?.calorieTarget || null,
-        proteinTarget: todayPlanDay?.proteinTarget || null,
-        carbsTarget: todayPlanDay?.carbsTarget || null,
-        fatTarget: todayPlanDay?.fatTarget || null,
-        notes: todayPlanDay?.notes || null,
-        workoutNotes: todayPlanDay?.workoutNotes || null,
+        calorieTarget: targetPlanDay?.calorieTarget || null,
+        proteinTarget: targetPlanDay?.proteinTarget || null,
+        carbsTarget: targetPlanDay?.carbsTarget || null,
+        fatTarget: targetPlanDay?.fatTarget || null,
+        notes: targetPlanDay?.notes || null,
+        workoutNotes: targetPlanDay?.workoutNotes || null,
       },
-      todayProgress: todayProgress
+      todayProgress: targetProgress
         ? {
-            workoutCompleted: todayProgress.workoutCompleted,
-            breakfastCompleted: todayProgress.breakfastCompleted,
-            lunchCompleted: todayProgress.lunchCompleted,
-            snackCompleted: todayProgress.snackCompleted,
-            dinnerCompleted: todayProgress.dinnerCompleted,
+            workoutCompleted: targetProgress.workoutCompleted,
+            breakfastCompleted: targetProgress.breakfastCompleted,
+            lunchCompleted: targetProgress.lunchCompleted,
+            snackCompleted: targetProgress.snackCompleted,
+            dinnerCompleted: targetProgress.dinnerCompleted,
           }
         : { workoutCompleted: false, breakfastCompleted: false, lunchCompleted: false, snackCompleted: false, dinnerCompleted: false },
       weekProgress: weekProgress.map((p) => ({

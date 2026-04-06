@@ -20,7 +20,11 @@ type PlanData = {
     weekNumber: number;
     dayOfWeek: number;
     totalWeeks: number;
+    todayWeekNumber: number;
+    todayDayOfWeek: number;
   } | null;
+  viewMode: "today" | "past" | "future";
+  selectedDate: string;
   today: {
     workout: Workout | null;
     mealPlan: string | null;
@@ -72,12 +76,35 @@ type Target = {
 };
 
 const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const DAY_NAMES_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+function formatDateLabel(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" });
+}
+
+function getTodayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 export default function MyPlanPage() {
   const [data, setData] = useState<PlanData | null>(null);
   const [targets, setTargets] = useState<Target[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const fetchPlan = useCallback(async (date?: string) => {
+    try {
+      const url = date ? `/api/user/plan?date=${date}` : "/api/user/plan";
+      const res = await fetch(url);
+      const planData = await res.json();
+      if (!planData.error) setData(planData);
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
@@ -100,8 +127,15 @@ export default function MyPlanPage() {
     fetchData();
   }, [fetchData]);
 
+  // When selectedDate changes, refetch plan data for that date
+  useEffect(() => {
+    if (selectedDate) {
+      fetchPlan(selectedDate);
+    }
+  }, [selectedDate, fetchPlan]);
+
   async function toggleProgress(field: "workoutCompleted" | "breakfastCompleted" | "lunchCompleted" | "snackCompleted" | "dinnerCompleted") {
-    if (!data || saving) return;
+    if (!data || saving || data.viewMode !== "today") return;
     setSaving(true);
     const current = data.todayProgress[field];
     try {
@@ -131,41 +165,81 @@ export default function MyPlanPage() {
     }
   }
 
+  // Navigate to a specific day in the selected week
+  function navigateToDay(dayOfWeek: number) {
+    if (!data?.plan) return;
+    // Calculate the date for this day in the currently viewed week
+    const startDate = new Date(data.plan.startDate);
+    const viewingWeek = data.plan.weekNumber;
+    // Days offset from plan start: (weekNumber - 1) * 7 + (dayOfWeek - 1)
+    const daysFromStart = (viewingWeek - 1) * 7 + (dayOfWeek - 1);
+    // Adjust for the weekday of startDate
+    const startDow = startDate.getDay() === 0 ? 7 : startDate.getDay();
+    const mondayOfStartWeek = new Date(startDate);
+    mondayOfStartWeek.setDate(mondayOfStartWeek.getDate() - (startDow - 1));
+    const targetDate = new Date(mondayOfStartWeek);
+    targetDate.setDate(targetDate.getDate() + (viewingWeek - 1) * 7 + (dayOfWeek - 1));
+    const dateStr = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}-${String(targetDate.getDate()).padStart(2, "0")}`;
+    setSelectedDate(dateStr);
+  }
+
+  function changeWeek(delta: number) {
+    if (!data?.plan) return;
+    const newWeek = data.plan.weekNumber + delta;
+    if (newWeek < 1 || newWeek > data.plan.totalWeeks) return;
+    // Navigate to Monday of the new week
+    const startDate = new Date(data.plan.startDate);
+    const startDow = startDate.getDay() === 0 ? 7 : startDate.getDay();
+    const mondayOfStartWeek = new Date(startDate);
+    mondayOfStartWeek.setDate(mondayOfStartWeek.getDate() - (startDow - 1));
+    const targetMonday = new Date(mondayOfStartWeek);
+    targetMonday.setDate(targetMonday.getDate() + (newWeek - 1) * 7);
+    const dateStr = `${targetMonday.getFullYear()}-${String(targetMonday.getMonth() + 1).padStart(2, "0")}-${String(targetMonday.getDate()).padStart(2, "0")}`;
+    setSelectedDate(dateStr);
+  }
+
+  function goToToday() {
+    setSelectedDate(getTodayStr());
+  }
+
   function getDayStatus(dayIndex: number) {
-    // dayIndex is 0-based (Mon=0), dayOfWeek is 1-based (Mon=1)
     if (!data?.plan) return "future";
     const dayNum = dayIndex + 1;
-    const today = data.plan.dayOfWeek;
+    const todayWeek = data.plan.todayWeekNumber;
+    const todayDow = data.plan.todayDayOfWeek;
+    const viewingWeek = data.plan.weekNumber;
 
-    if (dayNum === today) return "today";
-    if (dayNum > today) return "future";
+    // Calculate the date for this dot
+    const startDate = new Date(data.plan.startDate);
+    const startDow = startDate.getDay() === 0 ? 7 : startDate.getDay();
+    const mondayOfStartWeek = new Date(startDate);
+    mondayOfStartWeek.setDate(mondayOfStartWeek.getDate() - (startDow - 1));
+    const dotDate = new Date(mondayOfStartWeek);
+    dotDate.setDate(dotDate.getDate() + (viewingWeek - 1) * 7 + dayIndex);
+    const dotStr = dotDate.toISOString().split("T")[0];
 
-    // Past day: check if completed
-    const mondayDate = new Date();
-    const currentDow = mondayDate.getDay() === 0 ? 7 : mondayDate.getDay();
-    mondayDate.setDate(mondayDate.getDate() - (currentDow - 1));
+    const isActualToday = viewingWeek === todayWeek && dayNum === todayDow;
+    const isSelected = data.selectedDate === dotStr;
+    const isFutureDay = viewingWeek > todayWeek || (viewingWeek === todayWeek && dayNum > todayDow);
 
-    const targetDate = new Date(mondayDate);
-    targetDate.setDate(targetDate.getDate() + dayIndex);
-    const dateStr = targetDate.toISOString().split("T")[0];
+    if (isFutureDay) return isSelected ? "selected-future" : "future";
+    if (isActualToday) return isSelected ? "today-selected" : "today";
 
+    // Past day: check progress
     const progress = data.weekProgress.find((p) => {
       const pDate = new Date(p.date).toISOString().split("T")[0];
-      return pDate === dateStr;
+      return pDate === dotStr;
     });
 
-    if (progress && (progress.workoutCompleted || progress.breakfastCompleted || progress.lunchCompleted || progress.snackCompleted || progress.dinnerCompleted)) {
-      return "completed";
-    }
-    return "incomplete";
+    const hasProgress = progress && (progress.workoutCompleted || progress.breakfastCompleted || progress.lunchCompleted || progress.snackCompleted || progress.dinnerCompleted);
+    if (hasProgress) return isSelected ? "selected-completed" : "completed";
+    return isSelected ? "selected-incomplete" : "incomplete";
   }
 
   function getTargetPercent(t: Target) {
     if (!t.currentValue || t.targetValue === 0) return 0;
-    // For metrics like weight where lower is better, invert
     if (t.metric === "weight" || t.metric === "belly" || t.metric === "waist") {
       if (t.currentValue <= t.targetValue) return 100;
-      // How much progress made (assuming start was higher)
       return Math.min(100, Math.round((t.targetValue / t.currentValue) * 100));
     }
     return Math.min(100, Math.round((t.currentValue / t.targetValue) * 100));
@@ -177,17 +251,13 @@ export default function MyPlanPage() {
     return "#E51A1A";
   }
 
-  // Loading state
   if (loading) {
     return (
       <div>
         <h1 className="text-3xl font-black text-white mb-6">My Plan</h1>
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6 animate-pulse"
-            >
+            <div key={i} className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6 animate-pulse">
               <div className="h-4 bg-[#2A2A2A] rounded w-48 mb-3" />
               <div className="h-6 bg-[#2A2A2A] rounded w-32" />
             </div>
@@ -197,7 +267,6 @@ export default function MyPlanPage() {
     );
   }
 
-  // No plan state
   if (!data?.plan) {
     return (
       <div>
@@ -209,13 +278,8 @@ export default function MyPlanPage() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-white mb-2">No plan assigned yet</h2>
-          <p className="text-white/50 mb-6">
-            Your coach will assign you a personalised training and nutrition plan soon.
-          </p>
-          <Link
-            href="/hub/messages"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#E51A1A] text-white font-semibold rounded-xl hover:bg-[#C41717] transition-colors"
-          >
+          <p className="text-white/50 mb-6">Your coach will assign you a personalised training and nutrition plan soon.</p>
+          <Link href="/hub/messages" className="inline-flex items-center gap-2 px-6 py-3 bg-[#E51A1A] text-white font-semibold rounded-xl hover:bg-[#C41717] transition-colors">
             Message your coach
           </Link>
         </div>
@@ -226,47 +290,91 @@ export default function MyPlanPage() {
   const plan = data.plan;
   const today = data.today;
   const progress = data.todayProgress;
+  const viewMode = data.viewMode;
+  const canToggle = viewMode === "today";
 
-  // Count completed days this week
   const completedDays = data.weekProgress.filter(
     (p) => p.workoutCompleted || p.breakfastCompleted || p.lunchCompleted || p.snackCompleted || p.dinnerCompleted
   ).length;
-  // Past days count (including today)
-  const pastDays = plan.dayOfWeek;
 
   return (
     <div>
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-black text-white mb-1">{plan.name}</h1>
-        <p className="text-white/50">
-          Week {plan.weekNumber} of {plan.totalWeeks} &middot; Day {plan.dayOfWeek}
+        <p className="text-white/50 text-sm">
+          {viewMode === "today"
+            ? "Today"
+            : formatDateLabel(data.selectedDate)}
+          {viewMode !== "today" && (
+            <button onClick={goToToday} className="ml-2 text-[#E51A1A] hover:underline bg-transparent border-none cursor-pointer text-sm">
+              Go to today
+            </button>
+          )}
         </p>
       </div>
 
-      {/* Week Row */}
+      {/* ── Week Navigation ── */}
       <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-5 mb-6">
-        <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-4">
-          This Week
-        </p>
+        {/* Week selector with arrows */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => changeWeek(-1)}
+            disabled={plan.weekNumber <= 1}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2A2A2A] text-white/50 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer border-none"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <p className="text-sm font-semibold text-white/60">
+            Week {plan.weekNumber} of {plan.totalWeeks}
+          </p>
+          <button
+            onClick={() => changeWeek(1)}
+            disabled={plan.weekNumber >= plan.totalWeeks}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#2A2A2A] text-white/50 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors cursor-pointer border-none"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Clickable day dots */}
         <div className="flex justify-between gap-2">
           {DAY_LABELS.map((label, i) => {
             const status = getDayStatus(i);
+            const isSelected = status.startsWith("selected") || status === "today-selected";
+            const isToday = status === "today" || status === "today-selected";
+            const isCompleted = status.includes("completed");
+            const isFuture = status.includes("future");
+
             return (
-              <div key={i} className="flex flex-col items-center gap-1.5">
+              <button
+                key={i}
+                onClick={() => navigateToDay(i + 1)}
+                className="flex flex-col items-center gap-1.5 cursor-pointer bg-transparent border-none p-0"
+              >
                 <span className="text-[10px] text-white/40 font-semibold">{label}</span>
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                    status === "today"
+                    isToday && isSelected
+                      ? "border-2 border-[#E51A1A] bg-[#E51A1A] text-white"
+                      : isToday
                       ? "border-2 border-[#E51A1A] text-white bg-[#E51A1A]/10"
-                      : status === "completed"
+                      : isSelected && isCompleted
+                      ? "bg-green-500 text-white ring-2 ring-green-400/50"
+                      : isSelected
+                      ? "bg-[#E51A1A]/80 text-white ring-2 ring-[#E51A1A]/50"
+                      : isCompleted
                       ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                      : status === "incomplete"
+                      : !isFuture
                       ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
                       : "bg-[#2A2A2A] text-white/20"
                   }`}
                 >
-                  {status === "completed" ? (
+                  {isCompleted && !isSelected ? (
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
@@ -274,22 +382,36 @@ export default function MyPlanPage() {
                     i + 1
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
         <p className="text-xs text-white/30 mt-4 text-center">
-          {completedDays}/{pastDays} days completed this week
+          {completedDays} day{completedDays !== 1 ? "s" : ""} completed this week
         </p>
       </div>
 
-      {/* Today's Detail */}
+      {/* ── Day Detail ── */}
       <div className="space-y-6">
+
+        {/* View-only banner for past/future */}
+        {viewMode !== "today" && (
+          <div className={`rounded-xl px-4 py-2.5 text-xs font-medium text-center ${
+            viewMode === "future"
+              ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+              : "bg-white/5 text-white/40 border border-[#2A2A2A]"
+          }`}>
+            {viewMode === "future"
+              ? `Upcoming — ${DAY_NAMES_FULL[(plan.dayOfWeek - 1) % 7]}'s plan`
+              : `Past — ${formatDateLabel(data.selectedDate)}`}
+          </div>
+        )}
+
         {/* Workout Section */}
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-white">Workout</h2>
-            {today.workout && (
+            {today.workout && canToggle && (
               <button
                 onClick={() => toggleProgress("workoutCompleted")}
                 disabled={saving}
@@ -299,13 +421,9 @@ export default function MyPlanPage() {
                     : "bg-[#2A2A2A] text-white/50 hover:text-white hover:bg-[#333]"
                 }`}
               >
-                <div
-                  className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                    progress.workoutCompleted
-                      ? "bg-green-500 border-green-500"
-                      : "border-white/30"
-                  }`}
-                >
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                  progress.workoutCompleted ? "bg-green-500 border-green-500" : "border-white/30"
+                }`}>
                   {progress.workoutCompleted && (
                     <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -315,6 +433,9 @@ export default function MyPlanPage() {
                 {progress.workoutCompleted ? "Completed" : "Mark Complete"}
               </button>
             )}
+            {today.workout && !canToggle && progress.workoutCompleted && (
+              <span className="text-xs font-semibold text-green-400 bg-green-500/10 px-3 py-1.5 rounded-lg">Completed</span>
+            )}
           </div>
 
           {today.workout ? (
@@ -322,14 +443,10 @@ export default function MyPlanPage() {
               <h3 className="text-xl font-bold text-white mb-2">{today.workout.title}</h3>
               <p className="text-white/50 text-sm mb-4">{today.workout.description}</p>
               {today.workoutNotes && (
-                <p className="text-white/40 text-sm mb-4 italic">
-                  Coach notes: {today.workoutNotes}
-                </p>
+                <p className="text-white/40 text-sm mb-4 italic">Coach notes: {today.workoutNotes}</p>
               )}
-              <Link
-                href={`/hub/workouts/${today.workout.slug}`}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E51A1A] text-white font-semibold rounded-xl hover:bg-[#C41717] transition-colors text-sm"
-              >
+              <Link href={`/hub/workouts/${today.workout.slug}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#E51A1A] text-white font-semibold rounded-xl hover:bg-[#C41717] transition-colors text-sm">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                 </svg>
@@ -339,25 +456,20 @@ export default function MyPlanPage() {
           ) : (
             <div className="text-center py-4">
               <p className="text-white/40 text-lg font-semibold">Rest Day</p>
-              {today.notes && (
-                <p className="text-white/30 text-sm mt-2">{today.notes}</p>
-              )}
+              {today.notes && <p className="text-white/30 text-sm mt-2">{today.notes}</p>}
             </div>
           )}
         </div>
 
-        {/* Meal Plan Section */}
+        {/* Nutrition Section */}
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
           <div className="mb-4">
             <h2 className="text-lg font-bold text-white">Nutrition</h2>
           </div>
 
-          {/* Calorie Target */}
           {today.calorieTarget && (
             <div className="mb-5">
-              <p className="text-xs text-white/40 uppercase tracking-wide mb-1">
-                Calorie Target
-              </p>
+              <p className="text-xs text-white/40 uppercase tracking-wide mb-1">Calorie Target</p>
               <p className="text-4xl font-black text-white">
                 {today.calorieTarget.toLocaleString()}
                 <span className="text-sm font-semibold text-white/40 ml-1">kcal</span>
@@ -365,7 +477,6 @@ export default function MyPlanPage() {
             </div>
           )}
 
-          {/* Macro Targets */}
           {!!(today.proteinTarget || today.carbsTarget || today.fatTarget) && (
             <div className="grid grid-cols-3 gap-3 mb-5">
               {today.proteinTarget && (
@@ -389,7 +500,7 @@ export default function MyPlanPage() {
             </div>
           )}
 
-          {/* Recipe Cards by Meal Type with per-meal toggles */}
+          {/* Recipe Cards by Meal Type */}
           {today.meals && today.meals.length > 0 && (
             <div className="space-y-5 mb-5">
               {(["breakfast", "lunch", "snack", "dinner"] as const).map((mealType) => {
@@ -402,29 +513,29 @@ export default function MyPlanPage() {
                 return (
                   <div key={mealType} className={`rounded-xl border p-4 transition-all ${isCompleted ? "bg-green-500/5 border-green-500/20" : "bg-[#0A0A0A]/50 border-[#2A2A2A]"}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">
-                        {icon} {label}
-                      </p>
-                      <button
-                        onClick={() => toggleProgress(progressField)}
-                        disabled={saving}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none ${
-                          isCompleted
-                            ? "bg-green-500/20 text-green-400"
-                            : "bg-[#2A2A2A] text-white/40 hover:text-white/60"
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                          isCompleted ? "bg-green-500 border-green-500" : "border-white/30"
-                        }`}>
-                          {isCompleted && (
-                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </div>
-                        {isCompleted ? "Done" : "Mark Done"}
-                      </button>
+                      <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">{icon} {label}</p>
+                      {canToggle ? (
+                        <button
+                          onClick={() => toggleProgress(progressField)}
+                          disabled={saving}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none ${
+                            isCompleted ? "bg-green-500/20 text-green-400" : "bg-[#2A2A2A] text-white/40 hover:text-white/60"
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                            isCompleted ? "bg-green-500 border-green-500" : "border-white/30"
+                          }`}>
+                            {isCompleted && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          {isCompleted ? "Done" : "Mark Done"}
+                        </button>
+                      ) : isCompleted ? (
+                        <span className="text-xs font-semibold text-green-400 bg-green-500/10 px-2.5 py-1 rounded-lg">Done</span>
+                      ) : null}
                     </div>
                     <div className="space-y-2">
                       {mealsOfType.map((meal) => {
@@ -433,17 +544,12 @@ export default function MyPlanPage() {
                         const adjPro = Math.round(meal.recipe.protein * mult);
                         const adjCarbs = Math.round(meal.recipe.carbs * mult);
                         return (
-                          <Link
-                            key={meal.id}
-                            href={`/hub/recipes/${meal.recipe.slug}`}
-                            className="flex items-center gap-3 bg-[#2A2A2A] rounded-xl p-3 hover:bg-[#333] transition-colors"
-                          >
+                          <Link key={meal.id} href={`/hub/recipes/${meal.recipe.slug}`}
+                            className="flex items-center gap-3 bg-[#2A2A2A] rounded-xl p-3 hover:bg-[#333] transition-colors">
                             {meal.recipe.imageUrl ? (
                               <img src={meal.recipe.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
                             ) : (
-                              <div className="w-12 h-12 rounded-lg bg-[#1E1E1E] flex items-center justify-center text-white/20 text-lg shrink-0">
-                                🍽️
-                              </div>
+                              <div className="w-12 h-12 rounded-lg bg-[#1E1E1E] flex items-center justify-center text-white/20 text-lg shrink-0">🍽️</div>
                             )}
                             <div className="flex-1 min-w-0">
                               <p className={`text-sm font-medium truncate ${isCompleted ? "text-white/50 line-through" : "text-white"}`}>{meal.recipe.title}</p>
@@ -467,7 +573,6 @@ export default function MyPlanPage() {
             </div>
           )}
 
-          {/* Additional Meal Notes */}
           {today.mealPlan && typeof today.mealPlan === "string" && (
             <div className="bg-[#2A2A2A] rounded-xl p-4 mb-4">
               <p className="text-xs text-white/40 uppercase tracking-wide mb-2">
@@ -477,19 +582,18 @@ export default function MyPlanPage() {
             </div>
           )}
 
-          <Link
-            href="/hub/snap-my-macros"
-            className="inline-flex items-center gap-2 text-[#E51A1A] font-semibold text-sm hover:underline"
-          >
-            Log your meals
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          {canToggle && (
+            <Link href="/hub/snap-my-macros"
+              className="inline-flex items-center gap-2 text-[#E51A1A] font-semibold text-sm hover:underline">
+              Log your meals
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          )}
         </div>
 
         {/* Coach Notes */}
-        {today.notes && !today.workout && null}
         {today.notes && today.workout && (
           <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
             <h2 className="text-lg font-bold text-white mb-2">Notes from Coach</h2>
@@ -505,41 +609,20 @@ export default function MyPlanPage() {
               {targets.map((t) => {
                 const percent = getTargetPercent(t);
                 const color = getTargetColor(percent);
-                const metricLabel =
-                  t.metric.charAt(0).toUpperCase() + t.metric.slice(1);
-                const unit =
-                  t.metric === "weight"
-                    ? "kg"
-                    : t.metric === "steps"
-                    ? "steps"
-                    : t.metric === "calories"
-                    ? "kcal"
-                    : "in";
-
+                const metricLabel = t.metric.charAt(0).toUpperCase() + t.metric.slice(1);
+                const unit = t.metric === "weight" ? "kg" : t.metric === "steps" ? "steps" : t.metric === "calories" ? "kcal" : "in";
                 return (
                   <div key={t.id}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-semibold text-white">
-                        {metricLabel}
-                      </span>
+                      <span className="text-sm font-semibold text-white">{metricLabel}</span>
                       <span className="text-xs text-white/50">
-                        {t.currentValue !== null
-                          ? `${t.currentValue} / ${t.targetValue} ${unit}`
-                          : `Target: ${t.targetValue} ${unit}`}
+                        {t.currentValue !== null ? `${t.currentValue} / ${t.targetValue} ${unit}` : `Target: ${t.targetValue} ${unit}`}
                       </span>
                     </div>
                     <div className="h-2 bg-[#2A2A2A] rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${Math.min(percent, 100)}%`,
-                          backgroundColor: color,
-                        }}
-                      />
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(percent, 100)}%`, backgroundColor: color }} />
                     </div>
-                    <p className="text-[10px] mt-1 text-white/30 text-right">
-                      {percent}%
-                    </p>
+                    <p className="text-[10px] mt-1 text-white/30 text-right">{percent}%</p>
                   </div>
                 );
               })}
