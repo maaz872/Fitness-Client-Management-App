@@ -69,7 +69,10 @@ export async function GET() {
                 date: { gte: weekStart, lt: weekEnd },
                 OR: [
                   { workoutCompleted: true },
-                  { mealsCompleted: true },
+                  { breakfastCompleted: true },
+                  { lunchCompleted: true },
+                  { snackCompleted: true },
+                  { dinnerCompleted: true },
                 ],
               },
             });

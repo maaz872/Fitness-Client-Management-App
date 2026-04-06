@@ -171,7 +171,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
     })),
     progress: activePlan.progress.map(p => ({
       id: p.id, date: p.date.toISOString(),
-      workoutCompleted: p.workoutCompleted, mealsCompleted: p.mealsCompleted,
+      workoutCompleted: p.workoutCompleted,
+      breakfastCompleted: p.breakfastCompleted, lunchCompleted: p.lunchCompleted,
+      snackCompleted: p.snackCompleted, dinnerCompleted: p.dinnerCompleted,
       notes: p.notes,
     })),
   } : null;

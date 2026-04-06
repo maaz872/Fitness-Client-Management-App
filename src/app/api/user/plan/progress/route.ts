@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { workoutCompleted, mealsCompleted } = body;
+    const { workoutCompleted, breakfastCompleted, lunchCompleted, snackCompleted, dinnerCompleted } = body;
 
     // Find active plan
     const plan = await prisma.clientPlan.findFirst({
@@ -26,10 +26,13 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Build upsert data
+    // Build upsert data — only include fields that were sent
     const updateData: Record<string, boolean> = {};
     if (workoutCompleted !== undefined) updateData.workoutCompleted = workoutCompleted;
-    if (mealsCompleted !== undefined) updateData.mealsCompleted = mealsCompleted;
+    if (breakfastCompleted !== undefined) updateData.breakfastCompleted = breakfastCompleted;
+    if (lunchCompleted !== undefined) updateData.lunchCompleted = lunchCompleted;
+    if (snackCompleted !== undefined) updateData.snackCompleted = snackCompleted;
+    if (dinnerCompleted !== undefined) updateData.dinnerCompleted = dinnerCompleted;
 
     const progress = await prisma.dailyProgress.upsert({
       where: {
@@ -45,7 +48,10 @@ export async function POST(req: NextRequest) {
         clientPlanId: plan.id,
         date: todayStart,
         workoutCompleted: workoutCompleted || false,
-        mealsCompleted: mealsCompleted || false,
+        breakfastCompleted: breakfastCompleted || false,
+        lunchCompleted: lunchCompleted || false,
+        snackCompleted: snackCompleted || false,
+        dinnerCompleted: dinnerCompleted || false,
       },
     });
 
@@ -56,7 +62,9 @@ export async function POST(req: NextRequest) {
     });
     const firstName = userData?.firstName || "A client";
 
-    if (progress.workoutCompleted && progress.mealsCompleted) {
+    const allMealsDone = progress.breakfastCompleted && progress.lunchCompleted && progress.snackCompleted && progress.dinnerCompleted;
+
+    if (progress.workoutCompleted && allMealsDone) {
       await notifyAdmin(
         "Full Adherence",
         `${firstName} crushed it today -- 100% adherence!`,
@@ -74,7 +82,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       workoutCompleted: progress.workoutCompleted,
-      mealsCompleted: progress.mealsCompleted,
+      breakfastCompleted: progress.breakfastCompleted,
+      lunchCompleted: progress.lunchCompleted,
+      snackCompleted: progress.snackCompleted,
+      dinnerCompleted: progress.dinnerCompleted,
     });
   } catch (error) {
     console.error("Progress POST error:", error);

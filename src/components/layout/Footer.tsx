@@ -1,10 +1,10 @@
 import Link from "next/link";
-import Image from "next/image";
 import { prisma } from "@/lib/db";
 
 export default async function Footer() {
   let socials: { name: string; url: string; visible: boolean }[] = [];
   let siteName = "Level Up";
+  let logoUrl = "/images/logo.svg";
 
   try {
     const settings = await prisma.siteContent.findMany({
@@ -13,7 +13,7 @@ export default async function Footer() {
           in: [
             "social_youtube", "social_instagram", "social_facebook", "social_tiktok",
             "social_youtube_visible", "social_instagram_visible", "social_facebook_visible", "social_tiktok_visible",
-            "site_name",
+            "site_name", "site_logo",
           ],
         },
       },
@@ -23,6 +23,7 @@ export default async function Footer() {
     for (const item of settings) s[item.contentKey] = item.contentValue;
 
     if (s.site_name) siteName = s.site_name;
+    if (s.site_logo) logoUrl = s.site_logo;
 
     socials = [
       { name: "YouTube", url: s.social_youtube || "", visible: s.social_youtube_visible === "true" },
@@ -45,12 +46,13 @@ export default async function Footer() {
           {/* Logo + Copyright */}
           <div>
             <div className="flex items-center gap-2.5 mb-4">
-              <Image
-                src="/images/logo.svg"
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
                 alt={siteName}
                 width={36}
                 height={36}
-                className="rounded-full"
+                className="rounded-full object-cover"
               />
               <span className="font-bold text-base tracking-wider uppercase">
                 {siteName}

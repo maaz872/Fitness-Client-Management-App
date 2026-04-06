@@ -554,8 +554,11 @@ model DailyProgress {
   userId           String
   clientPlanId     Int
   date             DateTime
-  workoutCompleted Boolean  @default(false)
-  mealsCompleted   Boolean  @default(false)
+  workoutCompleted     Boolean  @default(false)
+  breakfastCompleted   Boolean  @default(false)
+  lunchCompleted       Boolean  @default(false)
+  snackCompleted       Boolean  @default(false)
+  dinnerCompleted      Boolean  @default(false)
   notes            String?
   createdAt        DateTime @default(now())
 

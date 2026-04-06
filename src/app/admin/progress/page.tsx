@@ -67,7 +67,7 @@ export default async function AdminProgressPage() {
                 userId: u.id,
                 clientPlanId: plan.id,
                 date: { gte: weekStart, lt: weekEnd },
-                OR: [{ workoutCompleted: true }, { mealsCompleted: true }],
+                OR: [{ workoutCompleted: true }, { breakfastCompleted: true }, { lunchCompleted: true }, { snackCompleted: true }, { dinnerCompleted: true }],
               },
             });
             adherencePercent =

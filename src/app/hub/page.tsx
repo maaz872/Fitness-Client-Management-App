@@ -30,7 +30,10 @@ type PlanSummary = {
   };
   todayProgress: {
     workoutCompleted: boolean;
-    mealsCompleted: boolean;
+    breakfastCompleted: boolean;
+    lunchCompleted: boolean;
+    snackCompleted: boolean;
+    dinnerCompleted: boolean;
   };
 };
 
@@ -84,7 +87,7 @@ export default function HubDashboard() {
       .catch(() => {});
   }, []);
 
-  async function togglePlanProgress(field: "workoutCompleted" | "mealsCompleted") {
+  async function togglePlanProgress(field: "workoutCompleted" | "breakfastCompleted" | "lunchCompleted" | "snackCompleted" | "dinnerCompleted") {
     if (!planData || planSaving) return;
     setPlanSaving(true);
     const current = planData.todayProgress[field];
@@ -182,30 +185,30 @@ export default function HubDashboard() {
                 </div>
                 Workout
               </button>
-              <button
-                onClick={() => togglePlanProgress("mealsCompleted")}
-                disabled={planSaving}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none ${
-                  planData.todayProgress.mealsCompleted
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-[#2A2A2A] text-white/50 hover:text-white"
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 rounded border flex items-center justify-center ${
-                    planData.todayProgress.mealsCompleted
-                      ? "bg-green-500 border-green-500"
-                      : "border-white/30"
-                  }`}
-                >
-                  {planData.todayProgress.mealsCompleted && (
-                    <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-                Meals
-              </button>
+              {(() => {
+                const tp = planData.todayProgress;
+                const mealsDone = [tp.breakfastCompleted, tp.lunchCompleted, tp.snackCompleted, tp.dinnerCompleted].filter(Boolean).length;
+                const allDone = mealsDone === 4;
+                return (
+                  <span className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold ${
+                    allDone ? "bg-green-500/20 text-green-400" : mealsDone > 0 ? "bg-orange-500/20 text-orange-400" : "bg-[#2A2A2A] text-white/50"
+                  }`}>
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
+                      allDone ? "bg-green-500 border-green-500" : mealsDone > 0 ? "bg-orange-500 border-orange-500" : "border-white/30"
+                    }`}>
+                      {allDone && (
+                        <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {mealsDone > 0 && !allDone && (
+                        <span className="text-[8px] text-white font-bold">{mealsDone}</span>
+                      )}
+                    </div>
+                    Meals {mealsDone}/4
+                  </span>
+                );
+              })()}
             </div>
           </div>
         </div>

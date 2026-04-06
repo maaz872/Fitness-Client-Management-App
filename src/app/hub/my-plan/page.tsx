@@ -49,12 +49,18 @@ type PlanData = {
   };
   todayProgress: {
     workoutCompleted: boolean;
-    mealsCompleted: boolean;
+    breakfastCompleted: boolean;
+    lunchCompleted: boolean;
+    snackCompleted: boolean;
+    dinnerCompleted: boolean;
   };
   weekProgress: {
     date: string;
     workoutCompleted: boolean;
-    mealsCompleted: boolean;
+    breakfastCompleted: boolean;
+    lunchCompleted: boolean;
+    snackCompleted: boolean;
+    dinnerCompleted: boolean;
   }[];
 };
 
@@ -94,7 +100,7 @@ export default function MyPlanPage() {
     fetchData();
   }, [fetchData]);
 
-  async function toggleProgress(field: "workoutCompleted" | "mealsCompleted") {
+  async function toggleProgress(field: "workoutCompleted" | "breakfastCompleted" | "lunchCompleted" | "snackCompleted" | "dinnerCompleted") {
     if (!data || saving) return;
     setSaving(true);
     const current = data.todayProgress[field];
@@ -148,7 +154,7 @@ export default function MyPlanPage() {
       return pDate === dateStr;
     });
 
-    if (progress && (progress.workoutCompleted || progress.mealsCompleted)) {
+    if (progress && (progress.workoutCompleted || progress.breakfastCompleted || progress.lunchCompleted || progress.snackCompleted || progress.dinnerCompleted)) {
       return "completed";
     }
     return "incomplete";
@@ -223,7 +229,7 @@ export default function MyPlanPage() {
 
   // Count completed days this week
   const completedDays = data.weekProgress.filter(
-    (p) => p.workoutCompleted || p.mealsCompleted
+    (p) => p.workoutCompleted || p.breakfastCompleted || p.lunchCompleted || p.snackCompleted || p.dinnerCompleted
   ).length;
   // Past days count (including today)
   const pastDays = plan.dayOfWeek;
@@ -342,32 +348,8 @@ export default function MyPlanPage() {
 
         {/* Meal Plan Section */}
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <h2 className="text-lg font-bold text-white">Nutrition</h2>
-            <button
-              onClick={() => toggleProgress("mealsCompleted")}
-              disabled={saving}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer border-none ${
-                progress.mealsCompleted
-                  ? "bg-green-500/20 text-green-400"
-                  : "bg-[#2A2A2A] text-white/50 hover:text-white hover:bg-[#333]"
-              }`}
-            >
-              <div
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                  progress.mealsCompleted
-                    ? "bg-green-500 border-green-500"
-                    : "border-white/30"
-                }`}
-              >
-                {progress.mealsCompleted && (
-                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-              {progress.mealsCompleted ? "Completed" : "Mark Complete"}
-            </button>
           </div>
 
           {/* Calorie Target */}
@@ -407,19 +389,43 @@ export default function MyPlanPage() {
             </div>
           )}
 
-          {/* Recipe Cards by Meal Type */}
+          {/* Recipe Cards by Meal Type with per-meal toggles */}
           {today.meals && today.meals.length > 0 && (
-            <div className="space-y-4 mb-5">
+            <div className="space-y-5 mb-5">
               {(["breakfast", "lunch", "snack", "dinner"] as const).map((mealType) => {
                 const mealsOfType = today.meals.filter((m) => m.mealType === mealType);
                 if (mealsOfType.length === 0) return null;
                 const icon = mealType === "breakfast" ? "🌅" : mealType === "lunch" ? "☀️" : mealType === "snack" ? "🍎" : "🌙";
                 const label = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+                const progressField = `${mealType}Completed` as "breakfastCompleted" | "lunchCompleted" | "snackCompleted" | "dinnerCompleted";
+                const isCompleted = progress[progressField];
                 return (
-                  <div key={mealType}>
-                    <p className="text-xs text-white/40 uppercase tracking-wide mb-2">
-                      {icon} {label}
-                    </p>
+                  <div key={mealType} className={`rounded-xl border p-4 transition-all ${isCompleted ? "bg-green-500/5 border-green-500/20" : "bg-[#0A0A0A]/50 border-[#2A2A2A]"}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+                        {icon} {label}
+                      </p>
+                      <button
+                        onClick={() => toggleProgress(progressField)}
+                        disabled={saving}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border-none ${
+                          isCompleted
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-[#2A2A2A] text-white/40 hover:text-white/60"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                          isCompleted ? "bg-green-500 border-green-500" : "border-white/30"
+                        }`}>
+                          {isCompleted && (
+                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        {isCompleted ? "Done" : "Mark Done"}
+                      </button>
+                    </div>
                     <div className="space-y-2">
                       {mealsOfType.map((meal) => {
                         const mult = meal.servings / meal.recipe.servings;
@@ -440,7 +446,7 @@ export default function MyPlanPage() {
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{meal.recipe.title}</p>
+                              <p className={`text-sm font-medium truncate ${isCompleted ? "text-white/50 line-through" : "text-white"}`}>{meal.recipe.title}</p>
                               <p className="text-[11px] text-white/40">
                                 {adjCal} kcal &middot; {adjPro}g P &middot; {adjCarbs}g C
                                 {meal.servings !== meal.recipe.servings && (

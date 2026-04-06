@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import NotificationBell from "@/components/ui/NotificationBell";
@@ -23,7 +22,7 @@ export default function Header() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { siteName, coachName } = useBranding();
+  const { siteName, coachName, logoUrl } = useBranding();
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -89,12 +88,13 @@ export default function Header() {
         <nav className="flex items-center justify-between px-6 h-[70px] max-w-[1300px] mx-auto">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
-            <Image
-              src="/images/logo.svg"
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={logoUrl}
               alt={siteName}
               width={40}
               height={40}
-              className="rounded-full"
+              className="rounded-full object-cover"
             />
             <span className="text-white font-bold text-[1.1rem] tracking-wider uppercase">
               {siteName}

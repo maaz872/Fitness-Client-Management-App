@@ -129,13 +129,19 @@ export async function GET() {
       todayProgress: todayProgress
         ? {
             workoutCompleted: todayProgress.workoutCompleted,
-            mealsCompleted: todayProgress.mealsCompleted,
+            breakfastCompleted: todayProgress.breakfastCompleted,
+            lunchCompleted: todayProgress.lunchCompleted,
+            snackCompleted: todayProgress.snackCompleted,
+            dinnerCompleted: todayProgress.dinnerCompleted,
           }
-        : { workoutCompleted: false, mealsCompleted: false },
+        : { workoutCompleted: false, breakfastCompleted: false, lunchCompleted: false, snackCompleted: false, dinnerCompleted: false },
       weekProgress: weekProgress.map((p) => ({
         date: p.date,
         workoutCompleted: p.workoutCompleted,
-        mealsCompleted: p.mealsCompleted,
+        breakfastCompleted: p.breakfastCompleted,
+        lunchCompleted: p.lunchCompleted,
+        snackCompleted: p.snackCompleted,
+        dinnerCompleted: p.dinnerCompleted,
       })),
     });
   } catch (error) {

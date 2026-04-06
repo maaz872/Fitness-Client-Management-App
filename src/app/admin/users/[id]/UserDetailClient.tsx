@@ -63,7 +63,7 @@ type PlanDay = {
 
 type PlanProgress = {
   id: number; date: string;
-  workoutCompleted: boolean; mealsCompleted: boolean; notes: string | null;
+  workoutCompleted: boolean; breakfastCompleted: boolean; lunchCompleted: boolean; snackCompleted: boolean; dinnerCompleted: boolean; notes: string | null;
 };
 
 type ActivePlan = {
@@ -588,7 +588,7 @@ function ActivePlanView({ userId, plan, onRefresh }: {
   // Build a set of completed dates
   const completedDates = new Set(
     plan.progress
-      .filter(p => p.workoutCompleted || p.mealsCompleted)
+      .filter(p => p.workoutCompleted || p.breakfastCompleted || p.lunchCompleted || p.snackCompleted || p.dinnerCompleted)
       .map(p => p.date.slice(0, 10))
   );
 
