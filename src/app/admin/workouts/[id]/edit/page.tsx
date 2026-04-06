@@ -163,10 +163,19 @@ export default function EditWorkoutPage({
             />
           </svg>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">Edit Workout</h1>
           <p className="text-white/50 mt-1">Update this workout video.</p>
         </div>
+        {slug && (
+          <Link
+            href={`/hub/workouts/${slug}`}
+            target="_blank"
+            className="text-xs px-4 py-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-semibold hover:bg-[#FF6B00]/20 transition-colors shrink-0"
+          >
+            Preview as User
+          </Link>
+        )}
       </div>
 
       {error && (

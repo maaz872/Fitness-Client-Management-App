@@ -166,6 +166,13 @@ export default function AdminRecipeList({
                 </button>
                 <div className="flex gap-2">
                   <Link
+                    href={`/hub/recipes/${recipe.slug}`}
+                    target="_blank"
+                    className="text-[11px] px-3 py-1.5 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-medium hover:bg-[#FF6B00]/20 transition-colors"
+                  >
+                    Preview
+                  </Link>
+                  <Link
                     href={`/admin/recipes/${recipe.id}/edit`}
                     className="text-[11px] px-3 py-1.5 bg-[#E51A1A]/10 text-[#E51A1A] rounded-lg font-medium hover:bg-[#E51A1A]/20 transition-colors"
                   >

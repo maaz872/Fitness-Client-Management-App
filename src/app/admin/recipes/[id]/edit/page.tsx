@@ -269,6 +269,15 @@ export default function EditRecipePage({ params }: { params: Promise<{ id: strin
           </Link>
           <h1 className="text-2xl font-bold text-white">Edit Recipe</h1>
         </div>
+        {slug && (
+          <Link
+            href={`/hub/recipes/${slug}`}
+            target="_blank"
+            className="text-xs px-4 py-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-semibold hover:bg-[#FF6B00]/20 transition-colors shrink-0"
+          >
+            Preview as User
+          </Link>
+        )}
       </div>
 
       {error && (

@@ -151,6 +151,13 @@ export default function AdminWorkoutsClient({
                     </button>
                     <div className="flex items-center gap-2">
                       <Link
+                        href={`/hub/workouts/${w.slug}`}
+                        target="_blank"
+                        className="text-[#FF6B00]/70 hover:text-[#FF6B00] text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 transition-colors"
+                      >
+                        Preview
+                      </Link>
+                      <Link
                         href={`/admin/workouts/${w.id}/edit`}
                         className="text-white/50 hover:text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                       >
