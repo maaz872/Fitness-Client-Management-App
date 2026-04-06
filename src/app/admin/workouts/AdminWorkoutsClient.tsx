@@ -14,7 +14,7 @@ interface WorkoutRow {
   createdAt: string;
   subcategoryName: string;
   categoryName: string;
-  youtubeUrl?: string | null;
+  videoUrl: string;
 }
 
 import VideoThumbnail from "@/components/ui/VideoThumbnail";
@@ -103,7 +103,7 @@ export default function AdminWorkoutsClient({
               >
                 {/* Thumbnail */}
                 <div className="relative w-full aspect-video bg-[#0A0A0A]">
-                  <VideoThumbnail url={w.youtubeUrl || ""} height="h-full" />
+                  <VideoThumbnail url={w.videoUrl} height="h-full" />
                   {/* Duration badge */}
                   {w.duration && (
                     <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-semibold px-2 py-0.5 rounded">

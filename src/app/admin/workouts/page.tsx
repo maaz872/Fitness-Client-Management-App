@@ -14,6 +14,7 @@ export default async function AdminWorkoutsPage() {
       id: number;
       title: string;
       slug: string;
+      videoUrl: string;
       difficulty: string;
       duration: string | null;
       isPublished: boolean;
@@ -26,6 +27,7 @@ export default async function AdminWorkoutsPage() {
       id: w.id,
       title: w.title,
       slug: w.slug,
+      videoUrl: w.videoUrl,
       difficulty: w.difficulty,
       duration: w.duration,
       isPublished: w.isPublished,
