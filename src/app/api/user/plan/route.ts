@@ -18,6 +18,17 @@ export async function GET() {
             workout: {
               select: { id: true, title: true, videoUrl: true, description: true, slug: true },
             },
+            meals: {
+              include: {
+                recipe: {
+                  select: {
+                    id: true, title: true, slug: true, imageUrl: true,
+                    calories: true, protein: true, carbs: true, fat: true, servings: true,
+                  },
+                },
+              },
+              orderBy: [{ mealType: "asc" }, { sortOrder: "asc" }],
+            },
           },
         },
       },
@@ -101,6 +112,13 @@ export async function GET() {
       today: {
         workout: todayPlanDay?.workout || null,
         mealPlan,
+        meals: (todayPlanDay?.meals || []).map((m) => ({
+          id: m.id,
+          mealType: m.mealType,
+          servings: m.servings,
+          sortOrder: m.sortOrder,
+          recipe: m.recipe,
+        })),
         calorieTarget: todayPlanDay?.calorieTarget || null,
         proteinTarget: todayPlanDay?.proteinTarget || null,
         carbsTarget: todayPlanDay?.carbsTarget || null,

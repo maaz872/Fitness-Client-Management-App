@@ -58,6 +58,7 @@ type PlanDay = {
   calorieTarget: number | null; proteinTarget: number | null;
   carbsTarget: number | null; fatTarget: number | null; notes: string | null;
   workoutTitle: string | null; workoutVideoUrl: string | null;
+  meals?: { mealType: string; recipeTitle: string; servings: number }[];
 };
 
 type PlanProgress = {
@@ -117,6 +118,18 @@ const mealTypeColor: Record<string, string> = {
 };
 
 const DAY_NAMES = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const TAB_META: Record<Tab, { icon: string; label: string }> = {
+  Overview: { icon: "📊", label: "Overview" },
+  Meals:    { icon: "🍽️", label: "Meals" },
+  Weight:   { icon: "⚖️", label: "Weight" },
+  Steps:    { icon: "👟", label: "Steps" },
+  Body:     { icon: "📏", label: "Body" },
+  Photos:   { icon: "📸", label: "Photos" },
+  Messages: { icon: "💬", label: "Messages" },
+  Plans:    { icon: "📋", label: "Plans" },
+  Targets:  { icon: "🎯", label: "Targets" },
+};
 
 function getMonday(d?: Date) {
   const date = d ? new Date(d) : new Date();
@@ -194,8 +207,32 @@ export default function UserDetailClient({ user, planTemplates, activePlan, week
       {/* ── Profile Header ── */}
       <ProfileHeader user={user} />
 
-      {/* ── Sticky Tab Bar ── */}
-      <div className="sticky top-0 z-20 bg-[#111111] border-b border-[#2A2A2A]">
+      {/* ── Mobile Card Grid (< sm) ── */}
+      <div className="sm:hidden px-4 pt-4 pb-2">
+        <div className="grid grid-cols-2 gap-3">
+          {TABS.map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className={`relative flex items-center gap-2.5 p-3.5 rounded-xl border transition-all min-h-[52px] cursor-pointer ${
+                tab === t
+                  ? "bg-[#E51A1A]/10 border-[#E51A1A]/40 shadow-[0_0_12px_rgba(229,26,26,0.08)]"
+                  : "bg-[#1E1E1E] border-[#2A2A2A] hover:border-[#3A3A3A]"
+              }`}>
+              <span className="text-lg leading-none">{TAB_META[t].icon}</span>
+              <span className={`text-sm font-medium ${tab === t ? "text-white" : "text-white/50"}`}>
+                {TAB_META[t].label}
+              </span>
+              {t === "Messages" && user.unreadMessages > 0 && (
+                <span className="absolute top-2 right-2 bg-[#E51A1A] text-white text-[9px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  {user.unreadMessages}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Desktop Sticky Tab Bar (>= sm) ── */}
+      <div className="hidden sm:block sticky top-0 z-20 bg-[#111111] border-b border-[#2A2A2A]">
         <div className="overflow-x-auto whitespace-nowrap scrollbar-none">
           <div className="flex">
             {TABS.map(t => (
@@ -636,6 +673,7 @@ function ActivePlanView({ userId, plan, onRefresh }: {
                         {isMissed && <span className="text-orange-400 text-sm mt-0.5">&#10007;</span>}
                         {!isPast && !isToday && <span className="text-white/20 text-sm mt-0.5">-</span>}
                         {day.workoutTitle && <span className="text-white/50 truncate w-full">{day.workoutTitle}</span>}
+                        {day.meals && day.meals.length > 0 && <span className="text-green-400/70 truncate w-full">{day.meals.length} recipe{day.meals.length !== 1 ? "s" : ""}</span>}
                       </>
                     )}
                   </div>

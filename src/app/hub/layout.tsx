@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import NotificationBell from "@/components/ui/NotificationBell";
+import InstallPrompt from "@/components/InstallPrompt";
 import { useBranding } from "@/lib/branding";
 
 const sidebarGroups = [
@@ -263,8 +264,9 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
         {/* Stats + Quick Log */}
         <StatsSection />
 
-        {/* Logout (deprioritized) */}
-        <div className="px-5 py-3 border-t border-[#1A1A1A]">
+        {/* Install + Logout */}
+        <div className="px-5 py-3 border-t border-[#1A1A1A] space-y-1">
+          <InstallPrompt />
           <button
             onClick={handleLogout}
             className="text-[11px] text-white/25 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
@@ -338,11 +340,12 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
         {/* Mobile stats */}
         <StatsSection onNavigate={() => setSidebarOpen(false)} />
 
-        {/* Mobile logout */}
+        {/* Mobile install + logout */}
         <div
-          className="px-5 py-3 border-t border-[#1A1A1A]"
+          className="px-5 py-3 border-t border-[#1A1A1A] space-y-1"
           style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
         >
+          <InstallPrompt />
           <button
             onClick={handleLogout}
             className="text-[11px] text-white/25 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"

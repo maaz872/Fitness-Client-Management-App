@@ -162,9 +162,10 @@ model Recipe {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  category    RecipeCategory     @relation(fields: [categoryId], references: [id])
-  dietaryTags RecipeDietaryTag[]
-  favourites  Favourite[]
+  category     RecipeCategory     @relation(fields: [categoryId], references: [id])
+  dietaryTags  RecipeDietaryTag[]
+  favourites   Favourite[]
+  planDayMeals PlanDayMeal[]
 
   @@index([categoryId, isPublished])
 }
@@ -477,6 +478,7 @@ model PlanTemplateDay {
 
   template PlanTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
   workout  Workout?     @relation(fields: [workoutId], references: [id])
+  meals    PlanDayMeal[]
 
   @@index([templateId, weekNumber, dayOfWeek])
 }
@@ -520,8 +522,29 @@ model ClientPlanDay {
 
   clientPlan ClientPlan @relation(fields: [clientPlanId], references: [id], onDelete: Cascade)
   workout    Workout?   @relation(fields: [workoutId], references: [id])
+  meals      PlanDayMeal[]
 
   @@index([clientPlanId, weekNumber, dayOfWeek])
+}
+
+// ─── Plan Day Meals (recipe links per meal type) ────────────────────
+
+model PlanDayMeal {
+  id            Int    @id @default(autoincrement())
+  templateDayId Int?
+  clientDayId   Int?
+  mealType      String // "breakfast" | "lunch" | "snack" | "dinner"
+  recipeId      Int
+  servings      Float  @default(1)
+  sortOrder     Int    @default(0)
+
+  templateDay PlanTemplateDay? @relation(fields: [templateDayId], references: [id], onDelete: Cascade)
+  clientDay   ClientPlanDay?   @relation(fields: [clientDayId], references: [id], onDelete: Cascade)
+  recipe      Recipe           @relation(fields: [recipeId], references: [id])
+
+  @@index([templateDayId, mealType])
+  @@index([clientDayId, mealType])
+  @@index([recipeId])
 }
 
 // ─── Daily Progress ──────────────────────────────────────────────────

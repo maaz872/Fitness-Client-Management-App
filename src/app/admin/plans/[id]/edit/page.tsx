@@ -14,6 +14,31 @@ interface Workout {
   slug: string;
 }
 
+interface RecipeOption {
+  id: number;
+  title: string;
+  category: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  servings: number;
+}
+
+interface MealEntry {
+  mealType: string;
+  recipeId: number;
+  recipeTitle: string;
+  servings: number;
+  sortOrder: number;
+  // per-serving macros
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  baseServings: number;
+}
+
 interface TemplateDay {
   id?: number;
   dayOfWeek: number;
@@ -26,6 +51,7 @@ interface TemplateDay {
   carbsTarget: string;
   fatTarget: string;
   notes: string;
+  meals: MealEntry[];
 }
 
 interface Template {
@@ -38,6 +64,12 @@ interface Template {
 }
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MEAL_TYPES = [
+  { key: "breakfast", label: "Breakfast", icon: "🌅" },
+  { key: "lunch", label: "Lunch", icon: "☀️" },
+  { key: "snack", label: "Snack", icon: "🍎" },
+  { key: "dinner", label: "Dinner", icon: "🌙" },
+];
 
 function emptyDay(weekNumber: number, dayOfWeek: number): TemplateDay {
   return {
@@ -51,6 +83,7 @@ function emptyDay(weekNumber: number, dayOfWeek: number): TemplateDay {
     carbsTarget: "",
     fatTarget: "",
     notes: "",
+    meals: [],
   };
 }
 
@@ -64,10 +97,12 @@ export default function EditPlanTemplatePage() {
 
   const [template, setTemplate] = useState<Template | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [recipes, setRecipes] = useState<RecipeOption[]>([]);
   const [days, setDays] = useState<Map<string, TemplateDay>>(new Map());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [expandedMealTypes, setExpandedMealTypes] = useState<Set<string>>(new Set());
 
   // Edit form state for current cell
   const [cellForm, setCellForm] = useState<TemplateDay>(emptyDay(1, 1));
@@ -76,12 +111,14 @@ export default function EditPlanTemplatePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [tRes, wRes] = await Promise.all([
+      const [tRes, wRes, rRes] = await Promise.all([
         fetch(`/api/admin/plans/${id}`),
         fetch("/api/admin/workouts"),
+        fetch("/api/admin/recipes"),
       ]);
       const tData = await tRes.json();
       const wData = await wRes.json();
+      const rData = await rRes.json();
 
       setTemplate(tData);
       setWorkouts(
@@ -89,6 +126,18 @@ export default function EditPlanTemplatePage() {
           id: w.id,
           title: w.title,
           slug: w.slug,
+        }))
+      );
+      setRecipes(
+        (rData.recipes || []).map((r: RecipeOption & { categoryId?: number }) => ({
+          id: r.id,
+          title: r.title,
+          category: r.category,
+          calories: r.calories,
+          protein: r.protein,
+          carbs: r.carbs,
+          fat: r.fat,
+          servings: r.servings || 1,
         }))
       );
 
@@ -106,6 +155,18 @@ export default function EditPlanTemplatePage() {
           carbsTarget: d.carbsTarget != null ? String(d.carbsTarget) : "",
           fatTarget: d.fatTarget != null ? String(d.fatTarget) : "",
           notes: d.notes || "",
+          meals: (d.meals || []).map((m: { mealType: string; recipeId: number; servings: number; sortOrder: number; recipe: RecipeOption }) => ({
+            mealType: m.mealType,
+            recipeId: m.recipeId,
+            recipeTitle: m.recipe?.title || "Unknown",
+            servings: m.servings,
+            sortOrder: m.sortOrder,
+            calories: m.recipe?.calories || 0,
+            protein: m.recipe?.protein || 0,
+            carbs: m.recipe?.carbs || 0,
+            fat: m.recipe?.fat || 0,
+            baseServings: m.recipe?.servings || 1,
+          })),
         });
       }
       setDays(map);
@@ -123,7 +184,14 @@ export default function EditPlanTemplatePage() {
   function openCell(week: number, day: number) {
     const key = dayKey(week, day);
     const existing = days.get(key);
-    setCellForm(existing ? { ...existing } : emptyDay(week, day));
+    const form = existing ? { ...existing, meals: [...existing.meals] } : emptyDay(week, day);
+    setCellForm(form);
+    // Expand meal types that have recipes
+    const expanded = new Set<string>();
+    for (const m of form.meals) {
+      expanded.add(m.mealType);
+    }
+    setExpandedMealTypes(expanded);
     setEditingCell(key);
   }
 
@@ -131,13 +199,13 @@ export default function EditPlanTemplatePage() {
     if (!editingCell) return;
     const updated = new Map(days);
 
-    // Check if the cell has any data
     const hasData =
       cellForm.workoutId ||
       cellForm.workoutNotes.trim() ||
       cellForm.mealPlan.trim() ||
       cellForm.calorieTarget ||
-      cellForm.notes.trim();
+      cellForm.notes.trim() ||
+      cellForm.meals.length > 0;
 
     if (hasData) {
       updated.set(editingCell, { ...cellForm });
@@ -157,6 +225,83 @@ export default function EditPlanTemplatePage() {
     setEditingCell(null);
   }
 
+  // Calculate total macros from all meals
+  function calcMealTotals(meals: MealEntry[]) {
+    let cal = 0, pro = 0, car = 0, fa = 0;
+    for (const m of meals) {
+      const mult = m.servings / m.baseServings;
+      cal += Math.round(m.calories * mult);
+      pro += Math.round(m.protein * mult * 10) / 10;
+      car += Math.round(m.carbs * mult * 10) / 10;
+      fa += Math.round(m.fat * mult * 10) / 10;
+    }
+    return { calories: cal, protein: pro, carbs: car, fat: fa };
+  }
+
+  function addRecipeToMeal(mealType: string, recipeId: number) {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+
+    const entry: MealEntry = {
+      mealType,
+      recipeId: recipe.id,
+      recipeTitle: recipe.title,
+      servings: recipe.servings,
+      sortOrder: cellForm.meals.filter((m) => m.mealType === mealType).length,
+      calories: recipe.calories,
+      protein: recipe.protein,
+      carbs: recipe.carbs,
+      fat: recipe.fat,
+      baseServings: recipe.servings,
+    };
+
+    const newMeals = [...cellForm.meals, entry];
+    const totals = calcMealTotals(newMeals);
+    setCellForm({
+      ...cellForm,
+      meals: newMeals,
+      // Auto-fill macros (admin can still override)
+      calorieTarget: String(totals.calories),
+      proteinTarget: String(totals.protein),
+      carbsTarget: String(totals.carbs),
+      fatTarget: String(totals.fat),
+    });
+  }
+
+  function removeRecipeFromMeal(mealType: string, index: number) {
+    const mealsOfType = cellForm.meals.filter((m) => m.mealType === mealType);
+    const otherMeals = cellForm.meals.filter((m) => m.mealType !== mealType);
+    mealsOfType.splice(index, 1);
+    const newMeals = [...otherMeals, ...mealsOfType];
+    const totals = calcMealTotals(newMeals);
+    setCellForm({
+      ...cellForm,
+      meals: newMeals,
+      calorieTarget: newMeals.length > 0 ? String(totals.calories) : cellForm.calorieTarget,
+      proteinTarget: newMeals.length > 0 ? String(totals.protein) : cellForm.proteinTarget,
+      carbsTarget: newMeals.length > 0 ? String(totals.carbs) : cellForm.carbsTarget,
+      fatTarget: newMeals.length > 0 ? String(totals.fat) : cellForm.fatTarget,
+    });
+  }
+
+  function updateMealServings(mealType: string, index: number, servings: number) {
+    const newMeals = [...cellForm.meals];
+    const mealsOfType = newMeals.filter((m) => m.mealType === mealType);
+    mealsOfType[index] = { ...mealsOfType[index], servings };
+    // Rebuild full array
+    const otherMeals = newMeals.filter((m) => m.mealType !== mealType);
+    const allMeals = [...otherMeals, ...mealsOfType];
+    const totals = calcMealTotals(allMeals);
+    setCellForm({
+      ...cellForm,
+      meals: allMeals,
+      calorieTarget: String(totals.calories),
+      proteinTarget: String(totals.protein),
+      carbsTarget: String(totals.carbs),
+      fatTarget: String(totals.fat),
+    });
+  }
+
   async function handleSaveAll() {
     setSaving(true);
     try {
@@ -171,6 +316,12 @@ export default function EditPlanTemplatePage() {
         carbsTarget: d.carbsTarget ? parseFloat(d.carbsTarget) : null,
         fatTarget: d.fatTarget ? parseFloat(d.fatTarget) : null,
         notes: d.notes || null,
+        meals: d.meals.map((m, idx) => ({
+          mealType: m.mealType,
+          recipeId: m.recipeId,
+          servings: m.servings,
+          sortOrder: idx,
+        })),
       }));
 
       const res = await fetch(`/api/admin/plans/${id}/days`, {
@@ -207,6 +358,15 @@ export default function EditPlanTemplatePage() {
       // silent
     }
   }
+
+  // Group recipes by category for <optgroup>
+  const recipesByCategory = recipes.reduce<Record<string, RecipeOption[]>>((acc, r) => {
+    const cat = r.category || "Other";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(r);
+    return acc;
+  }, {});
+  const categoryNames = Object.keys(recipesByCategory).sort();
 
   if (loading) {
     return (
@@ -303,7 +463,7 @@ export default function EditPlanTemplatePage() {
                 const key = dayKey(week, dow);
                 const d = days.get(key);
                 const hasWorkout = d?.workoutId;
-                const hasMeal = d?.mealPlan || d?.calorieTarget;
+                const hasMeal = d?.mealPlan || d?.calorieTarget || (d?.meals && d.meals.length > 0);
                 const isEmpty = !d;
 
                 let bgColor = "bg-[#0A0A0A]";
@@ -337,11 +497,14 @@ export default function EditPlanTemplatePage() {
                             {workouts.find((w) => w.id === d.workoutId)?.title || "Workout"}
                           </p>
                         )}
+                        {d.meals && d.meals.length > 0 && (
+                          <p className="text-[10px] text-green-400">{d.meals.length} recipe{d.meals.length !== 1 ? "s" : ""}</p>
+                        )}
                         {d.calorieTarget && (
                           <p className="text-[10px] text-orange-400">{d.calorieTarget} kcal</p>
                         )}
-                        {d.mealPlan && !d.calorieTarget && (
-                          <p className="text-[10px] text-orange-400 truncate">Meal plan</p>
+                        {d.mealPlan && !d.calorieTarget && d.meals.length === 0 && (
+                          <p className="text-[10px] text-orange-400 truncate">Meal notes</p>
                         )}
                         {d.notes && (
                           <p className="text-[10px] text-white/30 truncate">{d.notes}</p>
@@ -420,58 +583,152 @@ export default function EditPlanTemplatePage() {
                 />
               </div>
 
+              {/* ── Meal Recipes ── */}
+              <div className="border-t border-[#2A2A2A] pt-4">
+                <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">Meal Recipes</p>
+                {MEAL_TYPES.map(({ key, label, icon }) => {
+                  const mealsOfType = cellForm.meals.filter((m) => m.mealType === key);
+                  const isExpanded = expandedMealTypes.has(key);
+
+                  return (
+                    <div key={key} className="mb-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = new Set(expandedMealTypes);
+                          if (next.has(key)) next.delete(key);
+                          else next.add(key);
+                          setExpandedMealTypes(next);
+                        }}
+                        className="flex items-center justify-between w-full text-left py-1.5 bg-transparent border-none cursor-pointer"
+                      >
+                        <span className="text-xs font-medium text-white/70">
+                          {icon} {label}
+                          {mealsOfType.length > 0 && (
+                            <span className="ml-1.5 text-green-400">({mealsOfType.length})</span>
+                          )}
+                        </span>
+                        <span className="text-white/30 text-xs">{isExpanded ? "▲" : "▼"}</span>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="mt-1.5 space-y-1.5 pl-4">
+                          {/* Listed recipes */}
+                          {mealsOfType.map((meal, idx) => {
+                            const mult = meal.servings / meal.baseServings;
+                            const adjCal = Math.round(meal.calories * mult);
+                            return (
+                              <div key={idx} className="flex items-center gap-2 bg-[#0A0A0A] rounded-lg px-3 py-2">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs text-white truncate">{meal.recipeTitle}</p>
+                                  <p className="text-[10px] text-white/40">{adjCal} kcal</p>
+                                </div>
+                                <input
+                                  type="number"
+                                  min={0.5}
+                                  step={0.5}
+                                  value={meal.servings}
+                                  onChange={(e) => updateMealServings(key, idx, parseFloat(e.target.value) || 1)}
+                                  className="w-14 px-1.5 py-1 bg-[#1E1E1E] border border-[#2A2A2A] rounded text-xs text-white text-center focus:outline-none focus:border-[#E51A1A]/50"
+                                  title="Servings"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeRecipeFromMeal(key, idx)}
+                                  className="text-red-400/60 hover:text-red-400 text-sm bg-transparent border-none cursor-pointer"
+                                >
+                                  &times;
+                                </button>
+                              </div>
+                            );
+                          })}
+
+                          {/* Add recipe dropdown */}
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              if (e.target.value) addRecipeToMeal(key, parseInt(e.target.value));
+                            }}
+                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-dashed border-[#2A2A2A] rounded-lg text-xs text-white/50 focus:outline-none focus:border-[#E51A1A]/50"
+                          >
+                            <option value="">+ Add recipe...</option>
+                            {categoryNames.map((cat) => (
+                              <optgroup key={cat} label={cat}>
+                                {recipesByCategory[cat].map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.title} ({r.calories} kcal)
+                                  </option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
               {/* Calorie & Macros */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-white/50 mb-1">Calories (kcal)</label>
-                  <input
-                    type="number"
-                    value={cellForm.calorieTarget}
-                    onChange={(e) => setCellForm({ ...cellForm, calorieTarget: e.target.value })}
-                    placeholder="2000"
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
-                  />
+              <div className="border-t border-[#2A2A2A] pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-medium text-white/50">Calorie & Macro Targets</p>
+                  {cellForm.meals.length > 0 && (
+                    <span className="text-[10px] text-green-400/70">Auto-filled from recipes</span>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/50 mb-1">Protein (g)</label>
-                  <input
-                    type="number"
-                    value={cellForm.proteinTarget}
-                    onChange={(e) => setCellForm({ ...cellForm, proteinTarget: e.target.value })}
-                    placeholder="150"
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/50 mb-1">Carbs (g)</label>
-                  <input
-                    type="number"
-                    value={cellForm.carbsTarget}
-                    onChange={(e) => setCellForm({ ...cellForm, carbsTarget: e.target.value })}
-                    placeholder="200"
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-white/50 mb-1">Fat (g)</label>
-                  <input
-                    type="number"
-                    value={cellForm.fatTarget}
-                    onChange={(e) => setCellForm({ ...cellForm, fatTarget: e.target.value })}
-                    placeholder="60"
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">Calories (kcal)</label>
+                    <input
+                      type="number"
+                      value={cellForm.calorieTarget}
+                      onChange={(e) => setCellForm({ ...cellForm, calorieTarget: e.target.value })}
+                      placeholder="2000"
+                      className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">Protein (g)</label>
+                    <input
+                      type="number"
+                      value={cellForm.proteinTarget}
+                      onChange={(e) => setCellForm({ ...cellForm, proteinTarget: e.target.value })}
+                      placeholder="150"
+                      className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">Carbs (g)</label>
+                    <input
+                      type="number"
+                      value={cellForm.carbsTarget}
+                      onChange={(e) => setCellForm({ ...cellForm, carbsTarget: e.target.value })}
+                      placeholder="200"
+                      className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-white/50 mb-1">Fat (g)</label>
+                    <input
+                      type="number"
+                      value={cellForm.fatTarget}
+                      onChange={(e) => setCellForm({ ...cellForm, fatTarget: e.target.value })}
+                      placeholder="60"
+                      className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Meal Plan Notes */}
+              {/* Additional Meal Notes */}
               <div>
-                <label className="block text-xs font-medium text-white/50 mb-1">Meal Plan Notes</label>
+                <label className="block text-xs font-medium text-white/50 mb-1">Additional Meal Notes</label>
                 <textarea
                   value={cellForm.mealPlan}
                   onChange={(e) => setCellForm({ ...cellForm, mealPlan: e.target.value })}
-                  placeholder="e.g. Breakfast: Oats + protein shake..."
-                  rows={3}
+                  placeholder="e.g. Drink 3L water, avoid sugar after 6pm..."
+                  rows={2}
                   className="w-full px-3 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#E51A1A]/50 resize-none"
                 />
               </div>

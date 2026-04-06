@@ -66,7 +66,13 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const activePlan = user.activePlanId ? await prisma.clientPlan.findFirst({
     where: { userId: id, status: "active" },
     include: {
-      days: { include: { workout: { select: { title: true, videoUrl: true } } }, orderBy: [{ weekNumber: "asc" }, { dayOfWeek: "asc" }] },
+      days: {
+        include: {
+          workout: { select: { title: true, videoUrl: true } },
+          meals: { include: { recipe: { select: { id: true, title: true } } }, orderBy: [{ mealType: "asc" }, { sortOrder: "asc" }] },
+        },
+        orderBy: [{ weekNumber: "asc" }, { dayOfWeek: "asc" }],
+      },
       progress: { orderBy: { date: "desc" } },
     },
   }) : null;
@@ -159,6 +165,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       carbsTarget: d.carbsTarget, fatTarget: d.fatTarget, notes: d.notes,
       workoutTitle: d.workout?.title || null,
       workoutVideoUrl: d.workout?.videoUrl || null,
+      meals: (d.meals || []).map((m: { mealType: string; recipeId: number; servings: number; recipe: { title: string } }) => ({
+        mealType: m.mealType, recipeTitle: m.recipe.title, servings: m.servings,
+      })),
     })),
     progress: activePlan.progress.map(p => ({
       id: p.id, date: p.date.toISOString(),

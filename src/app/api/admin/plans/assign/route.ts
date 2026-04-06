@@ -41,16 +41,20 @@ export async function POST(request: Request) {
     let daysToCreate: CustomDay[] = [];
     let planType = type || "combined";
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let templateDaysWithMeals: any[] = [];
+
     if (templateId) {
-      // Copy days from template
+      // Copy days from template (include meals for recipe linking)
       const template = await prisma.planTemplate.findUnique({
         where: { id: parseInt(templateId) },
-        include: { days: true },
+        include: { days: { include: { meals: true } } },
       });
       if (!template) {
         return NextResponse.json({ error: "Template not found" }, { status: 404 });
       }
       planType = type || template.type;
+      templateDaysWithMeals = template.days;
       daysToCreate = template.days.map((d) => ({
         dayOfWeek: d.dayOfWeek,
         weekNumber: d.weekNumber,
@@ -80,23 +84,38 @@ export async function POST(request: Request) {
       },
     });
 
-    // Create ClientPlanDays
+    // Create ClientPlanDays (with nested meals if from template)
     if (daysToCreate.length > 0) {
-      await prisma.clientPlanDay.createMany({
-        data: daysToCreate.map((d: CustomDay) => ({
-          clientPlanId: clientPlan.id,
-          dayOfWeek: d.dayOfWeek,
-          weekNumber: d.weekNumber || 1,
-          workoutId: d.workoutId || null,
-          workoutNotes: d.workoutNotes || null,
-          mealPlan: d.mealPlan || null,
-          calorieTarget: d.calorieTarget || null,
-          proteinTarget: d.proteinTarget || null,
-          carbsTarget: d.carbsTarget || null,
-          fatTarget: d.fatTarget || null,
-          notes: d.notes || null,
-        })),
-      });
+      for (let i = 0; i < daysToCreate.length; i++) {
+        const d = daysToCreate[i];
+        // Get meals from template day if available
+        const templateDay = templateDaysWithMeals[i];
+        const mealsToCreate = templateDay?.meals?.length
+          ? templateDay.meals.map((m: { mealType: string; recipeId: number; servings: number; sortOrder: number }) => ({
+              mealType: m.mealType,
+              recipeId: m.recipeId,
+              servings: m.servings,
+              sortOrder: m.sortOrder,
+            }))
+          : [];
+
+        await prisma.clientPlanDay.create({
+          data: {
+            clientPlanId: clientPlan.id,
+            dayOfWeek: d.dayOfWeek,
+            weekNumber: d.weekNumber || 1,
+            workoutId: d.workoutId || null,
+            workoutNotes: d.workoutNotes || null,
+            mealPlan: d.mealPlan || null,
+            calorieTarget: d.calorieTarget || null,
+            proteinTarget: d.proteinTarget || null,
+            carbsTarget: d.carbsTarget || null,
+            fatTarget: d.fatTarget || null,
+            notes: d.notes || null,
+            meals: mealsToCreate.length > 0 ? { create: mealsToCreate } : undefined,
+          },
+        });
+      }
     }
 
     // Update user.activePlanId

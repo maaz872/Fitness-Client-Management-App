@@ -24,6 +24,22 @@ type PlanData = {
   today: {
     workout: Workout | null;
     mealPlan: string | null;
+    meals: {
+      id: number;
+      mealType: string;
+      servings: number;
+      recipe: {
+        id: number;
+        title: string;
+        slug: string;
+        imageUrl: string | null;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+        servings: number;
+      };
+    }[];
     calorieTarget: number | null;
     proteinTarget: number | null;
     carbsTarget: number | null;
@@ -391,10 +407,66 @@ export default function MyPlanPage() {
             </div>
           )}
 
-          {/* Meal Plan Notes */}
+          {/* Recipe Cards by Meal Type */}
+          {today.meals && today.meals.length > 0 && (
+            <div className="space-y-4 mb-5">
+              {(["breakfast", "lunch", "snack", "dinner"] as const).map((mealType) => {
+                const mealsOfType = today.meals.filter((m) => m.mealType === mealType);
+                if (mealsOfType.length === 0) return null;
+                const icon = mealType === "breakfast" ? "🌅" : mealType === "lunch" ? "☀️" : mealType === "snack" ? "🍎" : "🌙";
+                const label = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+                return (
+                  <div key={mealType}>
+                    <p className="text-xs text-white/40 uppercase tracking-wide mb-2">
+                      {icon} {label}
+                    </p>
+                    <div className="space-y-2">
+                      {mealsOfType.map((meal) => {
+                        const mult = meal.servings / meal.recipe.servings;
+                        const adjCal = Math.round(meal.recipe.calories * mult);
+                        const adjPro = Math.round(meal.recipe.protein * mult);
+                        const adjCarbs = Math.round(meal.recipe.carbs * mult);
+                        return (
+                          <Link
+                            key={meal.id}
+                            href={`/hub/recipes/${meal.recipe.slug}`}
+                            className="flex items-center gap-3 bg-[#2A2A2A] rounded-xl p-3 hover:bg-[#333] transition-colors"
+                          >
+                            {meal.recipe.imageUrl ? (
+                              <img src={meal.recipe.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-[#1E1E1E] flex items-center justify-center text-white/20 text-lg shrink-0">
+                                🍽️
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-white truncate">{meal.recipe.title}</p>
+                              <p className="text-[11px] text-white/40">
+                                {adjCal} kcal &middot; {adjPro}g P &middot; {adjCarbs}g C
+                                {meal.servings !== meal.recipe.servings && (
+                                  <span className="ml-1 text-white/30">({meal.servings} srv)</span>
+                                )}
+                              </p>
+                            </div>
+                            <svg className="w-4 h-4 text-white/20 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Additional Meal Notes */}
           {today.mealPlan && typeof today.mealPlan === "string" && (
             <div className="bg-[#2A2A2A] rounded-xl p-4 mb-4">
-              <p className="text-xs text-white/40 uppercase tracking-wide mb-2">Meal Plan</p>
+              <p className="text-xs text-white/40 uppercase tracking-wide mb-2">
+                {today.meals && today.meals.length > 0 ? "Additional Notes" : "Meal Plan"}
+              </p>
               <p className="text-sm text-white/70 whitespace-pre-wrap">{String(today.mealPlan)}</p>
             </div>
           )}

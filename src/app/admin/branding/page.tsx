@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 export default function AdminBrandingPage() {
   const [siteName, setSiteName] = useState("");
   const [coachName, setCoachName] = useState("");
+  const [pwaIcon192, setPwaIcon192] = useState<string | null>(null);
+  const [pwaIcon512, setPwaIcon512] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -16,10 +18,23 @@ export default function AdminBrandingPage() {
       .then((data) => {
         setSiteName(data.site_name || "Level Up");
         setCoachName(data.coach_name || "Coach Raheel");
+        if (data.pwa_icon_192) setPwaIcon192(data.pwa_icon_192);
+        if (data.pwa_icon_512) setPwaIcon512(data.pwa_icon_512);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  function handleIconUpload(
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: (v: string | null) => void
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setter(reader.result as string);
+    reader.readAsDataURL(file);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -35,6 +50,8 @@ export default function AdminBrandingPage() {
           entries: {
             site_name: siteName.trim(),
             coach_name: coachName.trim(),
+            ...(pwaIcon192 && { pwa_icon_192: pwaIcon192 }),
+            ...(pwaIcon512 && { pwa_icon_512: pwaIcon512 }),
           },
         }),
       });
@@ -105,6 +122,66 @@ export default function AdminBrandingPage() {
               <p className="text-white/30 text-xs mt-1.5">
                 Appears in the admin sidebar, approval messages, and about page.
               </p>
+            </div>
+
+            {/* PWA Icons Section */}
+            <div className="pt-4 border-t border-[#2A2A2A]">
+              <h3 className="font-semibold text-sm text-white mb-1">App Icon (PWA)</h3>
+              <p className="text-white/30 text-xs mb-4">
+                Icon shown on home screen when users install the app. Upload square PNG images.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 192x192 */}
+                <div>
+                  <label className="block text-xs text-white/50 mb-1.5">192 x 192 px</label>
+                  <div className="flex items-center gap-3">
+                    {pwaIcon192 ? (
+                      <img src={pwaIcon192} alt="Icon 192" className="w-12 h-12 rounded-lg border border-[#2A2A2A] object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg border border-[#2A2A2A] bg-[#0A0A0A] flex items-center justify-center text-white/20 text-[10px]">
+                        192
+                      </div>
+                    )}
+                    <label className="text-xs text-[#E51A1A] hover:text-[#FF6B00] cursor-pointer transition-colors">
+                      {pwaIcon192 ? "Replace" : "Upload"}
+                      <input type="file" accept="image/png" className="hidden"
+                        onChange={(e) => handleIconUpload(e, setPwaIcon192)} />
+                    </label>
+                    {pwaIcon192 && (
+                      <button type="button" onClick={() => setPwaIcon192(null)}
+                        className="text-xs text-white/30 hover:text-white/50 bg-transparent border-none cursor-pointer">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* 512x512 */}
+                <div>
+                  <label className="block text-xs text-white/50 mb-1.5">512 x 512 px</label>
+                  <div className="flex items-center gap-3">
+                    {pwaIcon512 ? (
+                      <img src={pwaIcon512} alt="Icon 512" className="w-12 h-12 rounded-lg border border-[#2A2A2A] object-cover" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg border border-[#2A2A2A] bg-[#0A0A0A] flex items-center justify-center text-white/20 text-[10px]">
+                        512
+                      </div>
+                    )}
+                    <label className="text-xs text-[#E51A1A] hover:text-[#FF6B00] cursor-pointer transition-colors">
+                      {pwaIcon512 ? "Replace" : "Upload"}
+                      <input type="file" accept="image/png" className="hidden"
+                        onChange={(e) => handleIconUpload(e, setPwaIcon512)} />
+                    </label>
+                    {pwaIcon512 && (
+                      <button type="button" onClick={() => setPwaIcon512(null)}
+                        className="text-xs text-white/30 hover:text-white/50 bg-transparent border-none cursor-pointer">
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {error && (
