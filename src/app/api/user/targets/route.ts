@@ -70,8 +70,9 @@ export async function GET() {
           };
           const field = fieldMap[t.metric];
           if (field) {
+            // Find latest measurement where THIS specific field is not null
             const latest = await prisma.bodyMeasurement.findFirst({
-              where: { userId: user.userId },
+              where: { userId: user.userId, [field]: { not: null } },
               orderBy: { loggedDate: "desc" },
             });
             if (latest) {

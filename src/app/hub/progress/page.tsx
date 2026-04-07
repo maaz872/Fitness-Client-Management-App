@@ -4,12 +4,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import TimeRangeFilter from "@/components/ui/TimeRangeFilter";
 import { fetchWithRetry } from "@/lib/fetch-retry";
 
-const PROGRESS_RANGE_OPTIONS = [
-  { label: "Month", value: "30d" },
-  { label: "3 Months", value: "90d" },
-  { label: "Year", value: "1y" },
-  { label: "All Time", value: "all" },
-];
+/* Uses default TimeRangeFilter options: Today, Week, Month, 6M, Year */
 
 function rangeToDays(range: string): number {
   switch (range) {
@@ -300,7 +295,7 @@ export default function ProgressPage() {
     return sorted.filter((m) => m.loggedDate.slice(0, 10) >= cutoffStr);
   }, [sorted, chartRange]);
 
-  const rangeLabel = chartRange === "all" ? "All Time" : chartRange === "1y" ? "1 Year" : chartRange === "90d" ? "3 Months" : "30 Days";
+  const rangeLabel = chartRange === "1y" ? "1 Year" : chartRange === "180d" ? "6 Months" : chartRange === "30d" ? "Month" : chartRange === "7d" ? "Week" : "Today";
 
   const tableEntries = useMemo(() => {
     const desc = [...sorted].reverse();
@@ -474,7 +469,7 @@ export default function ProgressPage() {
               { key: "weight", label: "Weight", unit: "kg", color: "#E51A1A", icon: "⚖️", lowerBetter: true },
               { key: "belly", label: "Belly", unit: "in", color: "#FF6B00", icon: "📏", lowerBetter: true },
               { key: "waist", label: "Waist", unit: "in", color: "#FFB800", icon: "📐", lowerBetter: true },
-              { key: "chest", label: "Chest", unit: "in", color: "#3B82F6", icon: "💪", lowerBetter: false },
+              { key: "chest", label: "Chest", unit: "in", color: "#3B82F6", icon: "🫁", lowerBetter: false },
               { key: "hips", label: "Hips", unit: "in", color: "#8B5CF6", icon: "🦵", lowerBetter: false },
               { key: "arms", label: "Arms", unit: "in", color: "#14B8A6", icon: "💪", lowerBetter: false },
             ] as const).map(({ key, label, unit, color, icon, lowerBetter }) => {
@@ -535,7 +530,7 @@ export default function ProgressPage() {
               </div>
             </div>
             <div className="mb-4">
-              <TimeRangeFilter value={chartRange} onChange={setChartRange} options={PROGRESS_RANGE_OPTIONS} />
+              <TimeRangeFilter value={chartRange} onChange={setChartRange} />
             </div>
             <MetricChart data={filteredSorted} metrics={activeMetrics} />
           </div>

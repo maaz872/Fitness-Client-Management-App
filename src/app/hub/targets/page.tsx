@@ -14,7 +14,7 @@ const METRIC_INFO: Record<string, { label: string; unit: string; icon: string }>
   weight:   { label: "Weight",   unit: "kg",    icon: "⚖️" },
   belly:    { label: "Belly",    unit: "in",    icon: "📏" },
   waist:    { label: "Waist",    unit: "in",    icon: "📐" },
-  chest:    { label: "Chest",    unit: "in",    icon: "💪" },
+  chest:    { label: "Chest",    unit: "in",    icon: "🫁" },
   hips:     { label: "Hips",     unit: "in",    icon: "🦵" },
   arms:     { label: "Arms",     unit: "in",    icon: "💪" },
   steps:    { label: "Steps",    unit: "steps", icon: "👟" },
