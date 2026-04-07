@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PreviewModal from "@/components/admin/PreviewModal";
 
 interface CategoryOption {
   id: number;
@@ -51,6 +52,7 @@ export default function EditRecipePage({ params }: { params: Promise<{ id: strin
   const [prepTimeMins, setPrepTimeMins] = useState<number>(0);
   const [cookTimeMins, setCookTimeMins] = useState<number>(0);
   const [isPublished, setIsPublished] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Fetch categories/tags and recipe data
   useEffect(() => {
@@ -269,15 +271,12 @@ export default function EditRecipePage({ params }: { params: Promise<{ id: strin
           </Link>
           <h1 className="text-2xl font-bold text-white">Edit Recipe</h1>
         </div>
-        {slug && (
-          <Link
-            href={`/hub/recipes/${slug}`}
-            target="_blank"
-            className="text-xs px-4 py-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-semibold hover:bg-[#FF6B00]/20 transition-colors shrink-0"
-          >
-            Preview as User
-          </Link>
-        )}
+        <button
+          onClick={() => setShowPreview(true)}
+          className="text-xs px-4 py-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-semibold hover:bg-[#FF6B00]/20 transition-colors shrink-0 cursor-pointer border-none"
+        >
+          Preview as User
+        </button>
       </div>
 
       {error && (
@@ -625,6 +624,20 @@ export default function EditRecipePage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       </form>
+
+      {showPreview && (
+        <PreviewModal
+          type="recipe"
+          data={{
+            title, description, videoUrl: videoUrl || null,
+            calories, protein, carbs, fat, servings, prepTimeMins, cookTimeMins,
+            ingredients: JSON.stringify(ingredients.filter(Boolean)),
+            instructions: JSON.stringify(instructions.filter(Boolean)),
+            category: categories.find(c => c.id === categoryId)?.name || "",
+          }}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import PreviewModal from "@/components/admin/PreviewModal";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -34,6 +35,25 @@ export default function AdminRecipeList({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("All");
   const [page, setPage] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [previewData, setPreviewData] = useState<any>(null);
+
+  async function openPreview(id: number) {
+    try {
+      const res = await fetch(`/api/admin/recipes/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const r = data.recipe || data;
+        setPreviewData({
+          title: r.title, description: r.description, videoUrl: r.videoUrl,
+          calories: r.calories, protein: r.protein, carbs: r.carbs, fat: r.fat,
+          servings: r.servings, prepTimeMins: r.prepTimeMins, cookTimeMins: r.cookTimeMins,
+          ingredients: r.ingredients, instructions: r.instructions,
+          category: r.category?.name || r.category,
+        });
+      }
+    } catch { /* ignore */ }
+  }
 
   const categories = [
     "All",
@@ -165,13 +185,12 @@ export default function AdminRecipeList({
                   {recipe.isPublished ? "Published" : "Draft"}
                 </button>
                 <div className="flex gap-2">
-                  <Link
-                    href={`/hub/recipes/${recipe.slug}`}
-                    target="_blank"
-                    className="text-[11px] px-3 py-1.5 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-medium hover:bg-[#FF6B00]/20 transition-colors"
+                  <button
+                    onClick={() => openPreview(recipe.id)}
+                    className="text-[11px] px-3 py-1.5 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-medium hover:bg-[#FF6B00]/20 transition-colors cursor-pointer border-none"
                   >
                     Preview
-                  </Link>
+                  </button>
                   <Link
                     href={`/admin/recipes/${recipe.id}/edit`}
                     className="text-[11px] px-3 py-1.5 bg-[#E51A1A]/10 text-[#E51A1A] rounded-lg font-medium hover:bg-[#E51A1A]/20 transition-colors"
@@ -227,6 +246,11 @@ export default function AdminRecipeList({
       <p className="text-xs text-white/30 text-center">
         Showing {paginated.length} of {filtered.length} recipes
       </p>
+
+      {/* Preview Modal */}
+      {previewData && (
+        <PreviewModal type="recipe" data={previewData} onClose={() => setPreviewData(null)} />
+      )}
     </div>
   );
 }

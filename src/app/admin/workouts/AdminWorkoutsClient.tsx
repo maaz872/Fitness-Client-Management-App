@@ -18,6 +18,7 @@ interface WorkoutRow {
 }
 
 import VideoThumbnail from "@/components/ui/VideoThumbnail";
+import PreviewModal from "@/components/admin/PreviewModal";
 
 export default function AdminWorkoutsClient({
   workouts,
@@ -26,6 +27,19 @@ export default function AdminWorkoutsClient({
 }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [previewData, setPreviewData] = useState<any>(null);
+
+  async function openPreview(id: number) {
+    try {
+      const res = await fetch(`/api/admin/workouts/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        const w = data.workout || data;
+        setPreviewData({ title: w.title, description: w.description, videoUrl: w.videoUrl, difficulty: w.difficulty, duration: w.duration, targetGoal: w.targetGoal, instructions: w.instructions });
+      }
+    } catch { /* ignore */ }
+  }
 
   async function handleDelete(id: number) {
     if (!confirm("Are you sure you want to delete this workout?")) return;
@@ -150,13 +164,12 @@ export default function AdminWorkoutsClient({
                       />
                     </button>
                     <div className="flex items-center gap-2">
-                      <Link
-                        href={`/hub/workouts/${w.slug}`}
-                        target="_blank"
-                        className="text-[#FF6B00]/70 hover:text-[#FF6B00] text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 transition-colors"
+                      <button
+                        onClick={() => openPreview(w.id)}
+                        className="text-[#FF6B00]/70 hover:text-[#FF6B00] text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-[#FF6B00]/5 hover:bg-[#FF6B00]/10 transition-colors cursor-pointer border-none"
                       >
                         Preview
-                      </Link>
+                      </button>
                       <Link
                         href={`/admin/workouts/${w.id}/edit`}
                         className="text-white/50 hover:text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
@@ -177,6 +190,11 @@ export default function AdminWorkoutsClient({
             );
           })}
         </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewData && (
+        <PreviewModal type="workout" data={previewData} onClose={() => setPreviewData(null)} />
       )}
     </div>
   );

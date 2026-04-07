@@ -3,6 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PreviewModal from "@/components/admin/PreviewModal";
 
 interface Subcategory {
   id: number;
@@ -28,6 +29,7 @@ export default function EditWorkoutPage({
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
@@ -167,15 +169,12 @@ export default function EditWorkoutPage({
           <h1 className="text-2xl font-bold text-white">Edit Workout</h1>
           <p className="text-white/50 mt-1">Update this workout video.</p>
         </div>
-        {slug && (
-          <Link
-            href={`/hub/workouts/${slug}`}
-            target="_blank"
-            className="text-xs px-4 py-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-semibold hover:bg-[#FF6B00]/20 transition-colors shrink-0"
-          >
-            Preview as User
-          </Link>
-        )}
+        <button
+          onClick={() => setShowPreview(true)}
+          className="text-xs px-4 py-2 bg-[#FF6B00]/10 text-[#FF6B00] rounded-lg font-semibold hover:bg-[#FF6B00]/20 transition-colors shrink-0 cursor-pointer border-none"
+        >
+          Preview as User
+        </button>
       </div>
 
       {error && (
@@ -430,6 +429,14 @@ export default function EditWorkoutPage({
           </Link>
         </div>
       </form>
+
+      {showPreview && (
+        <PreviewModal
+          type="workout"
+          data={{ title, description, videoUrl, difficulty, duration, targetGoal, instructions: JSON.stringify(instructions.filter(Boolean)) }}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </div>
   );
 }
