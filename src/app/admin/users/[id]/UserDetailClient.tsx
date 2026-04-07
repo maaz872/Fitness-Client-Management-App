@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import TimeRangeFilter from "@/components/ui/TimeRangeFilter";
@@ -792,115 +792,105 @@ const TARGET_METRICS = [
   { value: "calories", label: "Calories" },
 ];
 
-type TargetRow = { metric: string; targetValue: string; isVisible: boolean };
-
 function TargetsTab({ userId, weeklyTargets, onRefresh }: {
   userId: string; weeklyTargets: WeeklyTargetData[]; onRefresh: () => void;
 }) {
   const [weekStart, setWeekStart] = useState(getMonday());
-  const [rows, setRows] = useState<TargetRow[]>([{ metric: "weight", targetValue: "", isVisible: true }]);
+  const [grid, setGrid] = useState<Record<string, { value: string; visible: boolean }>>(
+    Object.fromEntries(TARGET_METRICS.map(m => [m.value, { value: "", visible: true }]))
+  );
   const [saving, setSaving] = useState(false);
 
-  const addRow = () => {
-    const usedMetrics = new Set(rows.map(r => r.metric));
-    const nextMetric = TARGET_METRICS.find(m => !usedMetrics.has(m.value))?.value || "weight";
-    setRows([...rows, { metric: nextMetric, targetValue: "", isVisible: true }]);
-  };
+  // Pre-fill grid when weekStart changes and existing targets match
+  useEffect(() => {
+    const weekTargets = weeklyTargets.filter(t => {
+      const tDate = new Date(t.weekStartDate).toISOString().split("T")[0];
+      return tDate === weekStart;
+    });
+    const newGrid = Object.fromEntries(TARGET_METRICS.map(m => [m.value, { value: "", visible: true }]));
+    for (const t of weekTargets) {
+      if (newGrid[t.metric]) {
+        newGrid[t.metric] = { value: String(t.targetValue), visible: t.isVisible };
+      }
+    }
+    setGrid(newGrid);
+  }, [weekStart, weeklyTargets]);
 
-  const removeRow = (i: number) => {
-    if (rows.length <= 1) return;
-    setRows(rows.filter((_, idx) => idx !== i));
-  };
-
-  const updateRow = (i: number, field: keyof TargetRow, value: string | boolean) => {
-    const next = [...rows];
-    (next[i] as Record<string, string | boolean>)[field] = value;
-    setRows(next);
+  const updateGrid = (metric: string, field: "value" | "visible", val: string | boolean) => {
+    setGrid(prev => ({ ...prev, [metric]: { ...prev[metric], [field]: val } }));
   };
 
   const saveTargets = async () => {
-    const valid = rows.filter(r => r.targetValue);
-    if (valid.length === 0) return;
+    const filled = TARGET_METRICS.filter(m => grid[m.value]?.value).map(m => ({
+      metric: m.value,
+      targetValue: parseFloat(grid[m.value].value),
+      isVisible: grid[m.value].visible,
+    }));
+    if (filled.length === 0) return;
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/users/${userId}/targets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          weekStartDate: weekStart,
-          targets: valid.map(r => ({
-            metric: r.metric,
-            targetValue: parseFloat(r.targetValue),
-            isVisible: r.isVisible,
-          })),
-        }),
+        body: JSON.stringify({ weekStartDate: weekStart, targets: filled }),
       });
       if (res.ok) {
         alert("Targets saved!");
-        setRows([{ metric: "weight", targetValue: "", isVisible: true }]);
         onRefresh();
       } else {
-        alert("Failed to save targets");
+        const data = await res.json();
+        alert(data.error || "Failed to save targets");
       }
     } catch { alert("Failed to save targets"); }
     setSaving(false);
   };
 
-  const inputCls = "w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white min-h-[44px]";
+  const filledCount = TARGET_METRICS.filter(m => grid[m.value]?.value).length;
 
   return (
     <div className="space-y-4">
-      {/* Set Weekly Targets Form */}
       <Card title="Set Weekly Targets">
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <label className="text-xs text-white/40 mb-1 block">Week Start Date</label>
-            <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)} className={inputCls} />
+            <label className="text-xs text-white/40 mb-1 block">Week Start Date (Monday)</label>
+            <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)}
+              className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white min-h-[44px]" />
           </div>
 
-          {rows.map((row, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <select value={row.metric} onChange={e => updateRow(i, "metric", e.target.value)}
-                className="flex-1 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-2 py-2 text-sm text-white min-h-[44px]">
-                {TARGET_METRICS.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-              <input type="number" step="any" value={row.targetValue}
-                onChange={e => updateRow(i, "targetValue", e.target.value)}
-                placeholder="Target"
-                className="w-24 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-2 py-2 text-sm text-white placeholder-white/30 min-h-[44px]" />
-              <button onClick={() => updateRow(i, "isVisible", !row.isVisible)}
-                className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border cursor-pointer ${
-                  row.isVisible ? "border-green-500/30 bg-green-500/10 text-green-400" : "border-[#2A2A2A] bg-[#0A0A0A] text-white/30"
-                }`} title={row.isVisible ? "Visible to user" : "Hidden from user"}>
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  {row.isVisible ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
-                  )}
-                </svg>
-              </button>
-              {rows.length > 1 && (
-                <button onClick={() => removeRow(i)}
-                  className="min-h-[44px] min-w-[44px] flex items-center justify-center text-red-400/60 hover:text-red-400 cursor-pointer">
-                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          ))}
+          {/* Fixed 8-metric grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {TARGET_METRICS.map(m => {
+              const g = grid[m.value] || { value: "", visible: true };
+              const hasValue = !!g.value;
+              return (
+                <div key={m.value} className={`flex items-center gap-2 rounded-lg px-3 py-2.5 border transition-colors ${
+                  hasValue ? "bg-[#0A0A0A] border-[#E51A1A]/20" : "bg-[#0A0A0A]/50 border-[#2A2A2A]"
+                }`}>
+                  <span className="text-xs font-medium text-white/60 w-20 shrink-0">{m.label}</span>
+                  <input type="number" step="any" value={g.value}
+                    onChange={e => updateGrid(m.value, "value", e.target.value)}
+                    placeholder="—"
+                    className="flex-1 bg-transparent border-none text-sm text-white placeholder-white/20 focus:outline-none text-right min-w-0 w-16" />
+                  <button onClick={() => updateGrid(m.value, "visible", !g.visible)}
+                    className={`w-7 h-7 flex items-center justify-center rounded border cursor-pointer shrink-0 ${
+                      g.visible ? "border-green-500/30 bg-green-500/10 text-green-400" : "border-[#2A2A2A] text-white/20"
+                    }`} title={g.visible ? "Visible to user" : "Hidden"}>
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      {g.visible ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18" />
+                      )}
+                    </svg>
+                  </button>
+                </div>
+              );
+            })}
+          </div>
 
-          <button onClick={addRow}
-            className="w-full min-h-[44px] border border-dashed border-[#2A2A2A] text-white/40 hover:text-white/60 text-sm rounded-lg cursor-pointer hover:border-[#444] transition-colors">
-            + Add Target
-          </button>
-
-          <button onClick={saveTargets} disabled={saving || rows.every(r => !r.targetValue)}
-            className="w-full min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer">
-            {saving ? "Saving..." : "Save Targets"}
+          <button onClick={saveTargets} disabled={saving || filledCount === 0}
+            className="w-full min-h-[44px] bg-[#E51A1A] hover:bg-[#c41717] disabled:opacity-40 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer border-none">
+            {saving ? "Saving..." : `Save ${filledCount} Target${filledCount !== 1 ? "s" : ""}`}
           </button>
         </div>
       </Card>

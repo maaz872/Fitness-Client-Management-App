@@ -51,7 +51,7 @@ const quickLinks = [
   { href: "/hub/restaurants", label: "Restaurants", desc: "Eat out without the guilt" },
   { href: "/hub/calculator", label: "Calculator", desc: "Get your macro targets" },
   { href: "/hub/my-meals", label: "My Meals", desc: "View your meal log history" },
-  { href: "/hub/progress", label: "Progress", desc: "Log weight and photos" },
+  { href: "/hub/progress", label: "Body", desc: "Log measurements" },
   { href: "/hub/analytics", label: "Analytics", desc: "Personal insights and trends" },
   { href: "/hub/steps", label: "Steps", desc: "Track daily steps" },
   { href: "/hub/favourites", label: "Favourites", desc: "Your saved recipes" },
@@ -397,11 +397,11 @@ export default function HubDashboard() {
               4
             </div>
             <div>
-              <p className="font-semibold text-sm text-white">Monitor your progress</p>
+              <p className="font-semibold text-sm text-white">Track your body</p>
               <p className="text-white/50 text-sm">
-                Log your weight and upload photos in the{" "}
+                Log your measurements in the{" "}
                 <Link href="/hub/progress" className="text-[#E51A1A] font-semibold">
-                  progress tracker
+                  measurements tracker
                 </Link>
                 .
               </p>

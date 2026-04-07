@@ -378,7 +378,7 @@ export default function ProgressPage() {
 
   return (
     <div className="w-full overflow-hidden">
-      <h1 className="text-3xl font-black mb-2">Progress Tracker</h1>
+      <h1 className="text-3xl font-black mb-2">Measurements Tracker</h1>
       <p className="text-white/50 mb-6">
         Track your body measurements and transformation over time.
       </p>

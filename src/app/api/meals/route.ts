@@ -17,8 +17,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Date parameter required" }, { status: 400 });
     }
 
-    const startOfDay = new Date(date + "T00:00:00.000Z");
-    const endOfDay = new Date(date + "T23:59:59.999Z");
+    const startOfDay = new Date(date + "T00:00:00");
+    const endOfDay = new Date(date + "T23:59:59.999");
 
     const meals = await prisma.mealLog.findMany({
       where: {

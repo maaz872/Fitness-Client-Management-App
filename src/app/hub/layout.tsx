@@ -28,7 +28,8 @@ const sidebarGroups = [
   {
     label: "TRACKING",
     links: [
-      { href: "/hub/progress", label: "Progress" },
+      { href: "/hub/progress", label: "Body" },
+      { href: "/hub/targets", label: "Targets" },
       { href: "/hub/analytics", label: "Analytics" },
       { href: "/hub/steps", label: "Steps" },
     ],

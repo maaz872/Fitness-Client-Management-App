@@ -326,12 +326,6 @@ export default function StepsPage() {
             >
               Log Steps
             </button>
-            <button
-              onClick={() => { setShowGoalEdit(!showGoalEdit); setShowLogForm(false); }}
-              className="px-5 py-2.5 bg-[#2A2A2A] text-white/70 rounded-xl font-semibold text-sm cursor-pointer border-none hover:bg-[#333] transition-colors min-h-[44px]"
-            >
-              Edit Goal
-            </button>
           </div>
 
           {showLogForm && (
@@ -354,25 +348,6 @@ export default function StepsPage() {
             </div>
           )}
 
-          {showGoalEdit && (
-            <div className="mt-4 flex gap-2 w-full max-w-xs">
-              <input
-                type="number"
-                placeholder="Daily goal"
-                value={goalInput}
-                onChange={(e) => setGoalInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleUpdateGoal()}
-                className="flex-1 border-2 border-[#2A2A2A] rounded-xl py-2.5 px-4 bg-[#1E1E1E] text-white focus:border-[#E51A1A] focus:outline-none text-sm min-h-[44px]"
-              />
-              <button
-                onClick={handleUpdateGoal}
-                disabled={saving}
-                className="px-4 py-2.5 bg-[#FF6B00] text-white rounded-xl font-semibold text-sm cursor-pointer border-none min-h-[44px]"
-              >
-                {saving ? "..." : "Set"}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Bar Chart */}
