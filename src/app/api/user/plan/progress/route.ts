@@ -14,17 +14,10 @@ export async function POST(req: NextRequest) {
     const { workoutCompleted, breakfastCompleted, lunchCompleted, snackCompleted, dinnerCompleted } = body;
 
     // Find active plan with today's day (need recipes for auto-logging)
+    // Find active plan (lightweight)
     const plan = await prisma.clientPlan.findFirst({
       where: { userId: user.userId, status: "active" },
-      include: {
-        days: {
-          include: {
-            meals: {
-              include: { recipe: { select: { title: true, calories: true, protein: true, carbs: true, fat: true, servings: true } } },
-            },
-          },
-        },
-      },
+      select: { id: true, startDate: true },
     });
 
     if (!plan) {
@@ -34,10 +27,9 @@ export async function POST(req: NextRequest) {
     // Today's date
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
-    // Calculate current week/day to find today's plan day
+    // Calculate current week/day
     const startDate = new Date(plan.startDate);
     const diffMs = todayStart.getTime() - startDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -45,7 +37,15 @@ export async function POST(req: NextRequest) {
     const jsDay = todayStart.getDay();
     const dayOfWeek = jsDay === 0 ? 7 : jsDay;
 
-    const todayPlanDay = plan.days.find(d => d.weekNumber === weekNumber && d.dayOfWeek === dayOfWeek);
+    // Fetch ONLY today's plan day with meals
+    const todayPlanDay = await prisma.clientPlanDay.findFirst({
+      where: { clientPlanId: plan.id, weekNumber, dayOfWeek },
+      include: {
+        meals: {
+          include: { recipe: { select: { title: true, calories: true, protein: true, carbs: true, fat: true, servings: true } } },
+        },
+      },
+    });
 
     // Build upsert data
     const updateData: Record<string, boolean> = {};

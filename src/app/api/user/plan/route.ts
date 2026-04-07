@@ -9,31 +9,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Optional date param — defaults to today
     const dateParam = request.nextUrl.searchParams.get("date");
 
-    // Find active plan
+    // Find active plan (lightweight — no days loaded)
     const plan = await prisma.clientPlan.findFirst({
       where: { userId: user.userId, status: "active" },
-      include: {
-        days: {
-          include: {
-            workout: {
-              select: { id: true, title: true, videoUrl: true, description: true, slug: true },
-            },
-            meals: {
-              include: {
-                recipe: {
-                  select: {
-                    id: true, title: true, slug: true, imageUrl: true,
-                    calories: true, protein: true, carbs: true, fat: true, servings: true,
-                  },
-                },
-              },
-              orderBy: [{ mealType: "asc" }, { sortOrder: "asc" }],
-            },
-          },
-        },
+      select: {
+        id: true, name: true, type: true, startDate: true,
+        days: { select: { weekNumber: true } }, // only for maxWeek calc
       },
     });
 
@@ -52,7 +35,7 @@ export async function GET(request: NextRequest) {
     const todayJsDay = todayDate.getDay();
     const todayDayOfWeek = todayJsDay === 0 ? 7 : todayJsDay;
 
-    // Target date — either from param or today
+    // Target date
     const targetDate = dateParam ? new Date(dateParam + "T00:00:00") : todayDate;
     const targetDiffMs = targetDate.getTime() - startDate.getTime();
     const targetDiffDays = Math.floor(targetDiffMs / (1000 * 60 * 60 * 24));
@@ -60,13 +43,32 @@ export async function GET(request: NextRequest) {
     const targetJsDay = targetDate.getDay();
     const targetDayOfWeek = targetJsDay === 0 ? 7 : targetJsDay;
 
-    // Total weeks from plan days
     const maxWeek = plan.days.reduce((max, d) => Math.max(max, d.weekNumber), 1);
 
-    // Find the target day's plan data
-    const targetPlanDay = plan.days.find(
-      (d) => d.weekNumber === targetWeekNumber && d.dayOfWeek === targetDayOfWeek
-    );
+    // Fetch ONLY the target day (not all 56 days)
+    const targetPlanDay = await prisma.clientPlanDay.findFirst({
+      where: {
+        clientPlanId: plan.id,
+        weekNumber: targetWeekNumber,
+        dayOfWeek: targetDayOfWeek,
+      },
+      include: {
+        workout: {
+          select: { id: true, title: true, videoUrl: true, description: true, slug: true },
+        },
+        meals: {
+          include: {
+            recipe: {
+              select: {
+                id: true, title: true, slug: true, imageUrl: true,
+                calories: true, protein: true, carbs: true, fat: true, servings: true,
+              },
+            },
+          },
+          orderBy: [{ mealType: "asc" }, { sortOrder: "asc" }],
+        },
+      },
+    });
 
     // Get target date progress
     const targetStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
@@ -81,7 +83,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Get the TARGET WEEK's progress (Mon-Sun of the selected week)
+    // Get the TARGET WEEK's progress (Mon-Sun)
     const targetMondayOffset = targetDayOfWeek - 1;
     const weekStart = new Date(targetStart);
     weekStart.setDate(weekStart.getDate() - targetMondayOffset);
@@ -109,7 +111,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Determine if viewing today, past, or future
     const targetStr = targetStart.toISOString().split("T")[0];
     const todayStr = todayDate.toISOString().split("T")[0];
     const viewMode = targetStr === todayStr ? "today" : targetStart < todayDate ? "past" : "future";
@@ -123,11 +124,10 @@ export async function GET(request: NextRequest) {
         weekNumber: targetWeekNumber,
         dayOfWeek: targetDayOfWeek,
         totalWeeks: maxWeek,
-        // Include today's position so frontend can highlight it
         todayWeekNumber,
         todayDayOfWeek,
       },
-      viewMode, // "today" | "past" | "future"
+      viewMode,
       selectedDate: targetStr,
       today: {
         workout: targetPlanDay?.workout || null,
