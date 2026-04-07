@@ -121,8 +121,9 @@ export default function TargetsPage() {
               const isAbove = hasCurrent && delta > 0;
               const isBelow = hasCurrent && delta < 0;
 
-              // Status color
-              const statusColor = isOnTarget ? "#22C55E" : isAbove ? "#FF6B00" : "#3B82F6";
+              // Status color — steps: more is better (above = green)
+              const isSteps = m.key === "steps";
+              const statusColor = isOnTarget ? "#22C55E" : isAbove ? (isSteps ? "#22C55E" : "#FF6B00") : "#3B82F6";
 
               return (
                 <div key={m.key} className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-4 flex flex-col">
@@ -158,14 +159,18 @@ export default function TargetsPage() {
                   {hasCurrent && (
                     <p className="text-[10px] font-medium mt-2 leading-tight" style={{ color: statusColor }}>
                       {isOnTarget && "✓ On Target"}
-                      {isAbove && `↑ Above by ${absDelta.toLocaleString()} ${m.unit}`}
+                      {isAbove && isSteps && `✓ ${absDelta.toLocaleString()} above target!`}
+                      {isAbove && !isSteps && `↑ Above by ${absDelta.toLocaleString()} ${m.unit}`}
                       {isBelow && `↓ Below by ${absDelta.toLocaleString()} ${m.unit}`}
                     </p>
                   )}
-                  {hasCurrent && !isOnTarget && (
+                  {hasCurrent && !isOnTarget && !isSteps && (
                     <p className="text-[9px] text-white/20 mt-0.5">
                       {isAbove ? "Aim to reduce" : "Aim to increase"}
                     </p>
+                  )}
+                  {hasCurrent && isBelow && isSteps && (
+                    <p className="text-[9px] text-white/20 mt-0.5">Keep moving!</p>
                   )}
                 </div>
               );
