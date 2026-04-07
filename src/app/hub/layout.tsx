@@ -82,9 +82,25 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
       .then((r) => r.json())
       .then((data) => {
         if (data.mealTotals) setCaloriesEaten(data.mealTotals.calories || 0);
-        if (data.targets) setCalorieTarget(data.targets.calories || 2000);
         if (data.stepsToday !== undefined) setSteps(data.stepsToday);
         if (data.stepGoal) setStepGoal(data.stepGoal);
+      })
+      .catch(() => {});
+
+    // Fetch calorie target from assigned plan
+    fetch("/api/user/plan")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.today?.calorieTarget) setCalorieTarget(data.today.calorieTarget);
+      })
+      .catch(() => {});
+
+    // Fetch step target from admin-set targets
+    fetch("/api/user/targets")
+      .then((r) => r.json())
+      .then((data) => {
+        const stepTarget = (data.targets || []).find((t: { metric: string }) => t.metric === "steps");
+        if (stepTarget) setStepGoal(stepTarget.targetValue);
       })
       .catch(() => {});
   }, []);

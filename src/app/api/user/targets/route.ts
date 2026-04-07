@@ -9,29 +9,35 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get this week's Monday (UTC-consistent to match DB storage)
-    const now = new Date();
-    const utcDay = now.getUTCDay(); // 0=Sun
-    const mondayOffset = utcDay === 0 ? 6 : utcDay - 1;
-    const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - mondayOffset));
-    const sunday = new Date(monday);
-    sunday.setDate(sunday.getDate() + 7);
-
+    // Get ALL visible targets for user (permanent, not weekly)
     const targets = await prisma.weeklyTarget.findMany({
       where: {
         userId: user.userId,
-        weekStartDate: monday,
         isVisible: true,
       },
+      orderBy: { updatedAt: "desc" },
     });
 
-    if (targets.length === 0) {
+    // Deduplicate: keep latest per metric
+    const seen = new Set<string>();
+    const unique = targets.filter(t => {
+      if (seen.has(t.metric)) return false;
+      seen.add(t.metric);
+      return true;
+    });
+
+    if (unique.length === 0) {
       return NextResponse.json({ targets: [] });
     }
 
+    // Date range for step/calorie averages (last 7 days)
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
     // Fill current values from user logs
     const enriched = await Promise.all(
-      targets.map(async (t) => {
+      unique.map(async (t) => {
         let currentValue = t.currentValue;
 
         if (t.metric === "weight") {
@@ -66,28 +72,12 @@ export async function GET() {
           const stepLogs = await prisma.stepLog.findMany({
             where: {
               userId: user.userId,
-              loggedDate: { gte: monday, lt: sunday },
+              loggedDate: { gte: weekAgo },
             },
           });
           if (stepLogs.length > 0) {
             const totalSteps = stepLogs.reduce((sum, s) => sum + s.steps, 0);
-            // Average by days logged (consistent with calories)
             currentValue = Math.round(totalSteps / stepLogs.length);
-          }
-        } else if (t.metric === "calories") {
-          const mealLogs = await prisma.mealLog.findMany({
-            where: {
-              userId: user.userId,
-              loggedDate: { gte: monday, lt: sunday },
-            },
-          });
-          if (mealLogs.length > 0) {
-            const totalCals = mealLogs.reduce((sum, m) => sum + m.calories, 0);
-            // Unique days
-            const uniqueDays = new Set(
-              mealLogs.map((m) => new Date(m.loggedDate).toDateString())
-            );
-            currentValue = Math.round(totalCals / uniqueDays.size);
           }
         }
 

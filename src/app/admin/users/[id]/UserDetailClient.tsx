@@ -787,32 +787,26 @@ const TARGET_METRICS = [
   { value: "hips", label: "Hips (in)" },
   { value: "arms", label: "Arms (in)" },
   { value: "steps", label: "Steps" },
-  { value: "calories", label: "Calories" },
 ];
 
 function TargetsTab({ userId, weeklyTargets, onRefresh }: {
   userId: string; weeklyTargets: WeeklyTargetData[]; onRefresh: () => void;
 }) {
-  const [weekStart, setWeekStart] = useState(getMonday());
   const [grid, setGrid] = useState<Record<string, { value: string; visible: boolean }>>(
     Object.fromEntries(TARGET_METRICS.map(m => [m.value, { value: "", visible: true }]))
   );
   const [saving, setSaving] = useState(false);
 
-  // Pre-fill grid when weekStart changes and existing targets match
+  // Pre-fill grid from existing targets (permanent, not weekly)
   useEffect(() => {
-    const weekTargets = weeklyTargets.filter(t => {
-      const tDate = new Date(t.weekStartDate).toISOString().split("T")[0];
-      return tDate === weekStart;
-    });
     const newGrid = Object.fromEntries(TARGET_METRICS.map(m => [m.value, { value: "", visible: true }]));
-    for (const t of weekTargets) {
+    for (const t of weeklyTargets) {
       if (newGrid[t.metric]) {
         newGrid[t.metric] = { value: String(t.targetValue), visible: t.isVisible };
       }
     }
     setGrid(newGrid);
-  }, [weekStart, weeklyTargets]);
+  }, [weeklyTargets]);
 
   const updateGrid = (metric: string, field: "value" | "visible", val: string | boolean) => {
     setGrid(prev => ({ ...prev, [metric]: { ...prev[metric], [field]: val } }));
@@ -830,7 +824,7 @@ function TargetsTab({ userId, weeklyTargets, onRefresh }: {
       const res = await fetch(`/api/admin/users/${userId}/targets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ weekStartDate: weekStart, targets: filled }),
+        body: JSON.stringify({ targets: filled }),
       });
       if (res.ok) {
         alert("Targets saved!");
@@ -847,15 +841,9 @@ function TargetsTab({ userId, weeklyTargets, onRefresh }: {
 
   return (
     <div className="space-y-4">
-      <Card title="Set Weekly Targets">
+      <Card title="Set Targets">
         <div className="space-y-4">
-          <div>
-            <label className="text-xs text-white/40 mb-1 block">Week Start Date (Monday)</label>
-            <input type="date" value={weekStart} onChange={e => setWeekStart(e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-sm text-white min-h-[44px]" />
-          </div>
-
-          {/* Fixed 8-metric grid */}
+          {/* Fixed 7-metric grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {TARGET_METRICS.map(m => {
               const g = grid[m.value] || { value: "", visible: true };
@@ -921,7 +909,7 @@ function TargetsTab({ userId, weeklyTargets, onRefresh }: {
                       )}
                     </div>
                     <p className="text-xs text-white/40">
-                      Week of {fmtDateShort(t.weekStartDate)}
+                      Updated {fmtDateShort(t.weekStartDate)}
                     </p>
                   </div>
                   <div className="text-right shrink-0 ml-3">
@@ -940,7 +928,7 @@ function TargetsTab({ userId, weeklyTargets, onRefresh }: {
       )}
 
       {weeklyTargets.length === 0 && (
-        <EmptyState text="No weekly targets set yet" />
+        <EmptyState text="No targets set yet" />
       )}
     </div>
   );

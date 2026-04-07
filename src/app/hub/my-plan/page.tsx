@@ -805,10 +805,10 @@ export default function MyPlanPage() {
           </div>
         )}
 
-        {/* Weekly Targets */}
+        {/* Targets */}
         {targets.length > 0 && (
           <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-6">
-            <h2 className="text-lg font-bold text-white mb-4">Weekly Targets</h2>
+            <h2 className="text-lg font-bold text-white mb-4">Targets</h2>
             <div className="space-y-4">
               {targets.map((t) => {
                 const percent = getTargetPercent(t);

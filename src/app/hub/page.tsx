@@ -219,11 +219,11 @@ export default function HubDashboard() {
         </div>
       )}
 
-      {/* Weekly Targets */}
+      {/* Targets */}
       {targets.length > 0 && (
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-white">Weekly Targets</h2>
+            <h2 className="text-sm font-bold text-white">Targets</h2>
             <Link href="/hub/targets" className="text-[10px] text-[#E51A1A] hover:underline">View all</Link>
           </div>
           <div className="space-y-2.5">

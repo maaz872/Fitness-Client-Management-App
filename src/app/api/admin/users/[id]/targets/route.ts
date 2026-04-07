@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -13,24 +13,26 @@ export async function GET(
     }
 
     const { id: userId } = await params;
-    const { searchParams } = new URL(request.url);
-    const weekStartDate = searchParams.get("weekStartDate");
 
-    const where: { userId: string; weekStartDate?: Date } = { userId };
-    if (weekStartDate) {
-      where.weekStartDate = new Date(weekStartDate);
-    }
-
+    // Get latest targets per metric (permanent, not weekly)
     const targets = await prisma.weeklyTarget.findMany({
-      where,
-      orderBy: [{ weekStartDate: "desc" }, { metric: "asc" }],
+      where: { userId },
+      orderBy: [{ updatedAt: "desc" }, { metric: "asc" }],
     });
 
-    return NextResponse.json(targets);
+    // Deduplicate: keep latest per metric
+    const seen = new Set<string>();
+    const unique = targets.filter(t => {
+      if (seen.has(t.metric)) return false;
+      seen.add(t.metric);
+      return true;
+    });
+
+    return NextResponse.json(unique);
   } catch (error) {
-    console.error("Get weekly targets error:", error);
+    console.error("Get targets error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch weekly targets" },
+      { error: "Failed to fetch targets" },
       { status: 500 }
     );
   }
@@ -54,30 +56,17 @@ export async function POST(
 
     const { id: userId } = await params;
     const body = await request.json();
-    const { weekStartDate, targets } = body as {
-      weekStartDate: string;
-      targets: TargetInput[];
-    };
+    const { targets } = body as { targets: TargetInput[] };
 
-    if (!weekStartDate || !targets || !Array.isArray(targets)) {
+    if (!targets || !Array.isArray(targets)) {
       return NextResponse.json(
-        { error: "weekStartDate and targets array are required" },
+        { error: "targets array is required" },
         { status: 400 }
       );
     }
 
-    // Validate weekStartDate is a Monday (use UTC to match DB storage)
-    const weekDate = new Date(weekStartDate + "T00:00:00Z");
-    const dayOfWeek = weekDate.getUTCDay();
-    if (dayOfWeek !== 1) {
-      return NextResponse.json(
-        { error: "weekStartDate must be a Monday" },
-        { status: 400 }
-      );
-    }
-
-    // Validate target values
-    const validMetrics = ["weight", "belly", "waist", "chest", "hips", "arms", "steps", "calories"];
+    // Validate target values (7 metrics, no calories)
+    const validMetrics = ["weight", "belly", "waist", "chest", "hips", "arms", "steps"];
     for (const t of targets) {
       if (!validMetrics.includes(t.metric)) {
         return NextResponse.json({ error: `Invalid metric: ${t.metric}` }, { status: 400 });
@@ -95,13 +84,17 @@ export async function POST(
     }
 
     // Check existing targets to avoid duplicate notifications
-    const existingTargets = await prisma.weeklyTarget.findMany({
-      where: { userId, weekStartDate: weekDate },
-    });
-    const existingMap = new Map(existingTargets.map(t => [t.metric, t.targetValue]));
+    const existingTargets = await prisma.weeklyTarget.findMany({ where: { userId } });
+    const existingMap = new Map<string, number>();
+    for (const t of existingTargets) {
+      existingMap.set(t.metric, t.targetValue);
+    }
 
     const created = [];
     let hasChanges = false;
+    const now = new Date();
+    // Use a fixed date for the weekStartDate field (backward compat — field required by schema)
+    const fixedDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     for (const t of targets) {
       const newValue = parseFloat(String(t.targetValue));
@@ -109,15 +102,15 @@ export async function POST(
       const changed = oldValue === undefined || oldValue !== newValue;
       if (changed) hasChanges = true;
 
-      // Upsert: delete existing for same metric+week, then create
+      // Delete ALL existing for this metric (any week), then create fresh
       await prisma.weeklyTarget.deleteMany({
-        where: { userId, weekStartDate: weekDate, metric: t.metric },
+        where: { userId, metric: t.metric },
       });
 
       const target = await prisma.weeklyTarget.create({
         data: {
           userId,
-          weekStartDate: weekDate,
+          weekStartDate: fixedDate,
           metric: t.metric,
           targetValue: newValue,
           isVisible: t.isVisible !== false,
@@ -132,19 +125,19 @@ export async function POST(
       await prisma.notification.create({
         data: {
           userId,
-          title: "Weekly Targets Updated",
-          message: `Your coach updated your weekly targets: ${metricList}`,
+          title: "Targets Updated",
+          message: `Your coach updated your targets: ${metricList}`,
           type: "target",
-          actionUrl: "/hub/my-plan",
+          actionUrl: "/hub/targets",
         },
       });
     }
 
     return NextResponse.json(created);
   } catch (error) {
-    console.error("Set weekly targets error:", error);
+    console.error("Set targets error:", error);
     return NextResponse.json(
-      { error: "Failed to set weekly targets" },
+      { error: "Failed to set targets" },
       { status: 500 }
     );
   }

@@ -17,7 +17,6 @@ const METRIC_INFO: Record<string, { label: string; unit: string; icon: string; l
   hips:     { label: "Hips",     unit: "in",    icon: "🦵",  lowerBetter: false },
   arms:     { label: "Arms",     unit: "in",    icon: "💪",  lowerBetter: false },
   steps:    { label: "Steps",    unit: "steps", icon: "👟",  lowerBetter: false },
-  calories: { label: "Calories", unit: "kcal",  icon: "🔥",  lowerBetter: false },
 };
 
 function getPercent(metric: string, current: number | null, target: number): number {
@@ -76,13 +75,13 @@ export default function TargetsPage() {
   return (
     <div>
       <h1 className="text-3xl font-black text-white mb-2">My Targets</h1>
-      <p className="text-white/50 text-sm mb-6">Your weekly targets set by your coach</p>
+      <p className="text-white/50 text-sm mb-6">Your targets set by your coach</p>
 
       {activeTargets.length === 0 ? (
         <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-2xl p-10 text-center">
           <div className="w-16 h-16 rounded-full bg-[#2A2A2A] flex items-center justify-center mx-auto mb-4 text-2xl">🎯</div>
           <h2 className="text-xl font-bold text-white mb-2">No targets set yet</h2>
-          <p className="text-white/50">Your coach will assign weekly targets for you soon.</p>
+          <p className="text-white/50">Your coach will assign targets for you soon.</p>
         </div>
       ) : (
         <>
