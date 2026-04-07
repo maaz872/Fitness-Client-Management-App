@@ -78,7 +78,7 @@ type WeeklyTargetData = {
 
 /* ─── Helpers ────────────────────────────────────────────────────────── */
 
-const TABS = ["Overview", "Meals", "Weight", "Steps", "Body", "Messages", "Plans", "Targets"] as const;
+const TABS = ["Overview", "Meals", "Steps", "Body", "Messages", "Plans", "Targets"] as const;
 type Tab = typeof TABS[number];
 
 function fmtDate(iso: string) {
@@ -121,7 +121,6 @@ const DAY_NAMES = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TAB_META: Record<Tab, { icon: string; label: string }> = {
   Overview: { icon: "📊", label: "Overview" },
   Meals:    { icon: "🍽️", label: "Meals" },
-  Weight:   { icon: "⚖️", label: "Weight" },
   Steps:    { icon: "👟", label: "Steps" },
   Body:     { icon: "📏", label: "Body" },
   Messages: { icon: "💬", label: "Messages" },
@@ -255,7 +254,6 @@ export default function UserDetailClient({ user, planTemplates, activePlan, week
             sendNotification={sendNotification} sending={sending} />
         )}
         {tab === "Meals" && <MealsTab meals={user.mealLogs} userId={user.id} macroTarget={user.macroTarget} onDelete={deleteMeal} onRefresh={() => router.refresh()} />}
-        {tab === "Weight" && <WeightTab logs={user.weightLogs} userId={user.id} fitnessGoal={user.fitnessGoal} onDelete={(id) => deleteEntry("weight", id)} onRefresh={() => router.refresh()} />}
         {tab === "Steps" && <StepsTab logs={user.stepLogs} userId={user.id} onDelete={(id) => deleteEntry("step", id)} onRefresh={() => router.refresh()} />}
         {tab === "Body" && <BodyTab measurements={user.bodyMeasurements} userId={user.id} onDelete={(id) => deleteEntry("measurement", id)} onRefresh={() => router.refresh()} />}
         {tab === "Messages" && <MessagesTab messages={user.messages} msgText={msgText} setMsgText={setMsgText} sendMessage={sendMessage} sending={sending} />}

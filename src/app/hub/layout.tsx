@@ -253,7 +253,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
               </p>
               <p className="text-[10px] text-white/30">{siteName} Hub</p>
             </div>
-            <NotificationBell />
+            <NotificationBell panelMode="sidebar" />
           </div>
         </div>
 
