@@ -588,3 +588,4 @@ model WeeklyTarget {
 
   @@index([userId, weekStartDate])
 }
+// force rebuild 1775594876
