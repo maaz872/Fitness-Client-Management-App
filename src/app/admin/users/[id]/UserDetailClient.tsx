@@ -296,22 +296,6 @@ function ProfileHeader({ user }: { user: UserData }) {
         </div>
       </div>
 
-      {/* Quick Stats Row */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        {/* Avg Daily Cals */}
-        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3 flex items-center gap-2">
-          <MiniRing pct={calPct} color="#E51A1A" size={36} />
-          <div className="min-w-0">
-            <p className="text-xs text-white/40 truncate">Avg Cals</p>
-            <p className="text-sm font-bold">{user.avgDailyCals.toLocaleString()}</p>
-          </div>
-        </div>
-        {/* Avg Daily Steps */}
-        <div className="bg-[#1E1E1E] border border-[#2A2A2A] rounded-xl p-3">
-          <p className="text-xs text-white/40">Avg Steps</p>
-          <p className="text-sm font-bold">{user.avgDailySteps.toLocaleString()}</p>
-        </div>
-      </div>
 
       {/* Alert Badges */}
       <div className="flex flex-wrap gap-2">
