@@ -261,7 +261,7 @@ export default function UserDetailClient({ user, planTemplates, activePlan, week
         {tab === "Messages" && <MessagesTab messages={user.messages} msgText={msgText} setMsgText={setMsgText} sendMessage={sendMessage} sending={sending} />}
         {tab === "Plans" && <PlansTab userId={user.id} activePlan={activePlan} planTemplates={planTemplates} onRefresh={() => router.refresh()} />}
         {tab === "Targets" && <TargetsTab userId={user.id} weeklyTargets={weeklyTargets} onRefresh={() => router.refresh()} />}
-        {tab === "Analytics" && <AnalyticsTab mealLogs={user.mealLogs} weightLogs={user.weightLogs} stepLogs={user.stepLogs} calorieTarget={user.macroTarget?.calories || null} targetWeightKg={user.targetWeightKg} />}
+        {tab === "Analytics" && <AnalyticsTab mealLogs={user.mealLogs} weightLogs={user.weightLogs} bodyMeasurements={user.bodyMeasurements} stepLogs={user.stepLogs} calorieTarget={user.macroTarget?.calories || null} targetWeightKg={user.targetWeightKg} />}
       </div>
 
       {/* ── Photo Modal ── */}
@@ -936,9 +936,9 @@ function TargetsTab({ userId, weeklyTargets, onRefresh }: {
 
 /* ─── Analytics Tab ─────────────────────────────────────────────────── */
 
-function AnalyticsTab({ mealLogs, weightLogs, stepLogs, calorieTarget, targetWeightKg }: {
-  mealLogs: MealLog[]; weightLogs: WeightLog[]; stepLogs: StepLog[];
-  calorieTarget: number | null; targetWeightKg: number | null;
+function AnalyticsTab({ mealLogs, weightLogs, bodyMeasurements, stepLogs, calorieTarget, targetWeightKg }: {
+  mealLogs: MealLog[]; weightLogs: WeightLog[]; bodyMeasurements: BodyMeasurement[];
+  stepLogs: StepLog[]; calorieTarget: number | null; targetWeightKg: number | null;
 }) {
   const [range, setRange] = useState("30d");
 
@@ -946,8 +946,31 @@ function AnalyticsTab({ mealLogs, weightLogs, stepLogs, calorieTarget, targetWei
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   const filteredMeals = mealLogs.filter(m => new Date(m.loggedDate) >= cutoff);
-  const filteredWeights = weightLogs.filter(w => new Date(w.loggedDate) >= cutoff);
   const filteredSteps = stepLogs.filter(s => new Date(s.loggedDate) >= cutoff);
+
+  // Merge weight data from BOTH weightLog AND bodyMeasurement tables
+  const allWeights: { weightKg: number; loggedDate: string }[] = [];
+  // From weightLog table
+  for (const w of weightLogs) {
+    if (new Date(w.loggedDate) >= cutoff) {
+      allWeights.push({ weightKg: w.weightKg, loggedDate: w.loggedDate });
+    }
+  }
+  // From bodyMeasurement table (where weightKg is not null)
+  for (const b of bodyMeasurements) {
+    if (b.weightKg !== null && new Date(b.loggedDate) >= cutoff) {
+      allWeights.push({ weightKg: b.weightKg, loggedDate: b.loggedDate });
+    }
+  }
+  // Deduplicate by date (keep latest per date)
+  const weightByDate: Record<string, number> = {};
+  for (const w of allWeights) {
+    const d = w.loggedDate.slice(0, 10);
+    weightByDate[d] = w.weightKg; // last write wins
+  }
+  const filteredWeights = Object.entries(weightByDate)
+    .map(([date, kg]) => ({ weightKg: kg, loggedDate: date }))
+    .filter(w => new Date(w.loggedDate) >= cutoff);
 
   // Daily calorie totals
   const calorieByDay: Record<string, number> = {};
