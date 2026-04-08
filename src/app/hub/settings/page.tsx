@@ -308,20 +308,6 @@ export default function SettingsPage() {
         </form>
       </div>
 
-      {/* Health Profile Link */}
-      <div className="bg-[#1E1E1E] rounded-2xl border border-[#2A2A2A] p-6 mb-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-bold text-white">Health Profile</h2>
-            <p className="text-white/40 text-sm mt-1">Age, weight, goals, dietary preferences</p>
-          </div>
-          <a href="/hub/health-profile" className="px-4 py-2 bg-[#E51A1A] text-white text-sm font-semibold rounded-xl hover:bg-[#C41010] transition-colors">
-            Edit Profile
-          </a>
-        </div>
-      </div>
-
-
       {/* Reminders */}
       <RemindersCard />
 

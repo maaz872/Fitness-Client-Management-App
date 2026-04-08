@@ -31,7 +31,6 @@ const sidebarGroups = [
     links: [
       { href: "/hub/progress", label: "Body" },
       { href: "/hub/targets", label: "Targets" },
-      { href: "/hub/analytics", label: "Analytics" },
       { href: "/hub/steps", label: "Steps" },
     ],
   },
@@ -279,15 +278,12 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
           <NavGroups />
         </nav>
 
-        {/* Stats + Quick Log */}
-        <StatsSection />
-
         {/* Install + Logout */}
-        <div className="px-5 py-3 border-t border-[#1A1A1A] space-y-1">
+        <div className="px-5 py-3 border-t border-[#1A1A1A] space-y-2">
           <InstallPrompt />
           <button
             onClick={handleLogout}
-            className="text-[11px] text-white/25 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
+            className="text-[13px] text-white/30 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
           >
             Log out
           </button>
@@ -355,18 +351,15 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
           <NavGroups mobile />
         </nav>
 
-        {/* Mobile stats */}
-        <StatsSection onNavigate={() => setSidebarOpen(false)} />
-
         {/* Mobile install + logout */}
         <div
-          className="px-5 py-3 border-t border-[#1A1A1A] space-y-1"
+          className="px-5 py-3 border-t border-[#1A1A1A] space-y-2"
           style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
         >
           <InstallPrompt />
           <button
             onClick={handleLogout}
-            className="text-[11px] text-white/25 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
+            className="text-[13px] text-white/30 hover:text-white/50 transition-colors cursor-pointer bg-transparent border-none"
           >
             Log out
           </button>
