@@ -41,7 +41,6 @@ export default function AdminContentPage() {
   const [tiktokVisible, setTiktokVisible] = useState(true);
 
   // Section Visibility
-  const [showTestimonials, setShowTestimonials] = useState(true);
   const [showTransformations, setShowTransformations] = useState(true);
   const [showCountdown, setShowCountdown] = useState(true);
 
@@ -75,7 +74,6 @@ export default function AdminContentPage() {
         if (data.social_tiktok_url) setTiktokUrl(data.social_tiktok_url);
         if (data.social_tiktok_visible !== undefined) setTiktokVisible(data.social_tiktok_visible === "true");
         // Visibility
-        if (data.show_testimonials !== undefined) setShowTestimonials(data.show_testimonials === "true");
         if (data.show_transformations !== undefined) setShowTransformations(data.show_transformations === "true");
         if (data.show_countdown !== undefined) setShowCountdown(data.show_countdown === "true");
         // About
@@ -168,7 +166,6 @@ export default function AdminContentPage() {
 
   function saveVisibility() {
     saveEntries("visibility", {
-      show_testimonials: String(showTestimonials),
       show_transformations: String(showTransformations),
       show_countdown: String(showCountdown),
     });
@@ -492,11 +489,6 @@ export default function AdminContentPage() {
               Control which sections are visible on the public website.
             </p>
             <div className="space-y-3">
-              <VisibilityRow
-                label="Show Testimonials Section"
-                checked={showTestimonials}
-                onChange={setShowTestimonials}
-              />
               <VisibilityRow
                 label="Show Transformations Section"
                 checked={showTransformations}

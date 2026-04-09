@@ -58,25 +58,16 @@ export default function Header() {
   const navLinks = (() => {
     if (!user) {
       return [
-        { href: "/nutrition", label: "The Hub" },
-        { href: "/testimonials", label: "Testimonials" },
-        { href: "/about", label: "About" },
+        { href: "/login", label: "Login" },
       ];
     }
     if (user.role === "ADMIN") {
       return [
         { href: "/admin", label: "Admin Panel" },
-        { href: "/nutrition", label: "The Hub" },
-        { href: "/testimonials", label: "Testimonials" },
-        { href: "/about", label: "About" },
       ];
     }
-    // Regular user
     return [
       { href: "/hub", label: "Dashboard" },
-      { href: "/nutrition", label: "The Hub" },
-      { href: "/testimonials", label: "Testimonials" },
-      { href: "/about", label: "About" },
     ];
   })();
 

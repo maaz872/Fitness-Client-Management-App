@@ -66,12 +66,12 @@ export default async function Footer() {
           {/* Links */}
           <div>
             <h4 className="text-[0.85rem] uppercase tracking-[2px] mb-4 text-white/60">
-              Find out more
+              Quick Links
             </h4>
             <div className="flex flex-col gap-1">
-              <Link href="/nutrition" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">The Hub</Link>
-              <Link href="/about" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">About</Link>
-              <Link href="/testimonials" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Testimonials</Link>
+              <Link href="/login" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Login</Link>
+              <Link href="/privacy-policy" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="text-white/70 text-[0.9rem] hover:text-[#E51A1A] transition-colors">Terms</Link>
             </div>
           </div>
 
